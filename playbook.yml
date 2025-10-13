@@ -1,10 +1,10 @@
 ---
-- name: Setup PostgreSQL with backup and restore
+- name: setup postgre with backup and restore
   hosts: all
   become: yes
 
   vars:
-    postgres_version: "15"        # ← можно менять версию
+    postgres_version: "15" 
     postgres_data_dir: "/var/lib/postgresql/{{ postgres_version }}/main"
     postgres_user: "postgres"
     backup_dir: "/var/backups/postgresql"
