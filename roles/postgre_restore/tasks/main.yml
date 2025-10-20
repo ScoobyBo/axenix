@@ -1,0 +1,10 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for postgre_restore
+- name: скрипт для восстановления из бэкапа
+  ansible.builtin.template:
+    src: restore_db.sh
+    dest: /usr/local/bin/pg_restore_latest.sh
+    owner: postgres
+    group: postgres
+    mode: 0750

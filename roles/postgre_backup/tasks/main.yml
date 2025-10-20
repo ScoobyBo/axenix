@@ -1,0 +1,36 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for postgre_backup
+- name: создание директории для бэкапов
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0750
+
+- name: копирование скриптов для бэкапирования
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: postgres
+    group: postgres
+    mode: 0750
+  loop:
+    - { src: "backup_full.sh", dest: "/usr/local/bin/pg_backup_full.sh" }
+    - { src: "backup_incremental.sh", dest: "/usr/local/bin/pg_backup_incremental.sh" }
+
+- name: крон джоба для фул бэкапа раз в день
+  ansible.builtin.cron:
+    name: "PostgreSQL Full Backup"
+    user: postgres
+    job: "/usr/local/bin/pg_backup_full.sh"
+    hour: "2"
+    minute: "0"
+
+- name: крон джоба для инкремента раз в час
+  ansible.builtin.cron:
+    name: "PostgreSQL Incremental Backup"
+    user: postgres
+    job: "/usr/local/bin/pg_backup_incremental.sh"
+    minute: "0"

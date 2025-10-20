@@ -1,0 +1,28 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for postgre_install
+- name: репа постгри
+  ansible.builtin.deb822_repository:
+    name: postgresql
+    types: [deb]
+    uris: "http://apt.postgresql.org/pub/repos/apt"
+    suites: ["{{ ansible_distribution_release }}-pgdg"]
+    components: ["main"]
+    signed_by: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+    state: present
+
+- name: установка постгри и зависимостей
+  ansible.builtin.apt:
+    name:
+      - "postgresql-{{ postgres_version }}"
+      - "postgresql-client-{{ postgres_version }}"
+      - python3-psycopg2
+      - python3-pip
+    state: present
+    update_cache: yes
+
+- name: запуск постгри
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: yes

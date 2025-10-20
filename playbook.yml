@@ -1,14 +1,31 @@
 ---
-- name: setup postgre with backup and restore
+- name: деплой постгри
   hosts: all
   become: yes
 
   vars:
-    postgres_version: "15" 
+    postgres_version: "16"
     postgres_data_dir: "/var/lib/postgresql/{{ postgres_version }}/main"
-    postgres_user: "postgres"
     backup_dir: "/var/backups/postgresql"
-    db_name: "example_db"
+
+    postgres_users:
+      - name: test_user1
+        password: "StrongPassword1"
+        databases: ["app_db"]
+      - name: test_user2
+        password: "12345678"
+        databases: ["analytics_db"]
+
+    postgres_databases:
+      - name: app_db
+        owner: test_user1
+      - name: analytics_db
+        owner: test_user2
 
   roles:
-    - pg_curse
+    - postgre_install
+    - postgre_remote
+    - postgre_users
+    - postgre_db
+    - postgre_backup
+#    - postgre_restore
