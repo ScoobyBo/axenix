@@ -1,0 +1,177 @@
+pipeline {
+    agent any
+
+    environment {
+        INVENTORY = "inventory.ini"
+    }
+
+    stages {
+
+        stage('Select Role') {
+            steps {
+                script {
+                    ROLE = input(
+                        id: "role_selector",
+                        message: "Выберите Ansible роль:",
+                        parameters: [
+                            choice(
+                                name: 'ROLE_NAME',
+                                choices: [
+                                    'postgre_install',
+                                    'postgre_db',
+                                    'postgre_users',
+                                    'postgre_backup',
+                                    'postgre_remote',
+                                    'postgre_restore'
+                                ].join('\n')
+                            )
+                        ]
+                    )
+                }
+            }
+        }
+
+        stage('Collect Parameters') {
+            steps {
+                script {
+
+                    if (ROLE == 'postgre_install') {
+                        PARAMS = input(message: "Введите параметры:", parameters: [
+                            string(name: 'PG_VERSION', description: 'Версия PostgreSQL')
+                        ])
+                    }
+
+                    if (ROLE == 'postgre_db') {
+                        PARAMS = input(message: "Введите параметры:", parameters: [
+                            string(name: 'DB_NAME', description: 'Имя базы'),
+                            string(name: 'DB_OWNER', description: 'Владелец'),
+                            string(name: 'PG_HOST', defaultValue: '', description: 'Хост (опционально)'),
+                            string(name: 'PG_PORT', defaultValue: '5432', description: 'Порт')
+                        ])
+                    }
+
+                    if (ROLE == 'postgre_users') {
+                        PARAMS = input(message: "Введите параметры:", parameters: [
+                            text(name: 'USERS', description: 'JSON список: [{"name":"u","password":"p"}]')
+                        ])
+                    }
+
+                    if (ROLE == 'postgre_backup') {
+                        PARAMS = input(message: "Введите параметры:", parameters: [
+                            string(name: 'BACKUP_DIR', description: 'Каталог бэкапов'),
+                            string(name: 'MAX_BACKUPS', description: 'Максимум файлов')
+                        ])
+                    }
+
+                    if (ROLE == 'postgre_remote') {
+                        PARAMS = input(message: "Введите параметры:", parameters: [
+                            choice(name: 'MODE', choices: ['init', 'join']),
+                            string(name: 'PG_VERSION', description: 'Версия'),
+                            string(name: 'DATA_DIR', description: 'Каталог данных'),
+                            string(name: 'PRIMARY_HOST', defaultValue: '', description: 'join: primary host'),
+                            string(name: 'PRIMARY_PORT', defaultValue: '5432', description: 'join: port'),
+                            string(name: 'REPL_USER', defaultValue: '', description: 'join: user'),
+                            password(name: 'REPL_PASS', defaultValue: '', description: 'join: pass')
+                        ])
+                    }
+
+                    if (ROLE == 'postgre_restore') {
+                        PARAMS = input(message: "Введите параметры:", parameters: [
+                            file(name: 'BACKUP_FILE', description: 'Файл бэкапа'),
+                            string(name: 'DATA_DIR', description: 'Каталог данных'),
+                            string(name: 'PG_VERSION', description: 'Версия PostgreSQL'),
+                            booleanParam(name: 'FORCE_REINIT', defaultValue: false, description: 'Удалить старый кластер?')
+                        ])
+                    }
+                }
+            }
+        }
+
+        stage('Run Ansible') {
+            steps {
+                script {
+
+                    // Сборка строки extras для ansible
+                    def extras = ""
+
+                    switch (ROLE) {
+
+                        case 'postgres_install':
+                            extras = "-e postgresql_version=${PARAMS.PG_VERSION}"
+                            ansiblePlaybook(
+                                playbook: "playbooks/postgres_install.yml",
+                                inventory: INVENTORY,
+                                extras: extras
+                            )
+                            break
+
+                        case 'postgres_db_init':
+                            extras = "-e db_name=${PARAMS.DB_NAME} " +
+                                     "-e db_owner=${PARAMS.DB_OWNER} " +
+                                     "-e postgresql_host='${PARAMS.PG_HOST}' " +
+                                     "-e postgresql_port=${PARAMS.PG_PORT}"
+
+                            ansiblePlaybook(
+                                playbook: "playbooks/postgres_db_init.yml",
+                                inventory: INVENTORY,
+                                extras: extras
+                            )
+                            break
+
+                        case 'postgres_users':
+                            writeFile file: "users.json", text: PARAMS.USERS
+                            extras = "-e @users.json"
+                            ansiblePlaybook(
+                                playbook: "playbooks/postgres_users.yml",
+                                inventory: INVENTORY,
+                                extras: extras
+                            )
+                            break
+
+                        case 'postgres_backup_setup':
+                            extras = "-e backup_dir=${PARAMS.BACKUP_DIR} " +
+                                     "-e max_backups=${PARAMS.MAX_BACKUPS}"
+
+                            ansiblePlaybook(
+                                playbook: "playbooks/postgres_backup_setup.yml",
+                                inventory: INVENTORY,
+                                extras: extras
+                            )
+                            break
+
+                        case 'postgres_cluster_setup':
+                            extras =
+                                "-e postgresql_mode=${PARAMS.MODE} " +
+                                "-e postgresql_version=${PARAMS.PG_VERSION} " +
+                                "-e data_directory=${PARAMS.DATA_DIR} " +
+                                "-e primary_host=${PARAMS.PRIMARY_HOST} " +
+                                "-e primary_port=${PARAMS.PRIMARY_PORT} " +
+                                "-e replication_user=${PARAMS.REPL_USER} " +
+                                "-e replication_password='${PARAMS.REPL_PASS}'"
+
+                            ansiblePlaybook(
+                                playbook: "playbooks/postgres_cluster_setup.yml",
+                                inventory: INVENTORY,
+                                extras: extras
+                            )
+                            break
+
+                        case 'postgres_restore':
+                            extras =
+                                "-e backup_file=${WORKSPACE}/${PARAMS.BACKUP_FILE} " +
+                                "-e data_directory=${PARAMS.DATA_DIR} " +
+                                "-e postgresql_version=${PARAMS.PG_VERSION} " +
+                                "-e force_reinit=${PARAMS.FORCE_REINIT}"
+
+                            ansiblePlaybook(
+                                playbook: "playbooks/postgres_restore.yml",
+                                inventory: INVENTORY,
+                                extras: extras
+                            )
+                            break
+                    }
+                }
+            }
+        }
+    }
+}

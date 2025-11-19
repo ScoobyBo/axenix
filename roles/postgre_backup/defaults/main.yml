@@ -1,3 +1,8 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for postgre_backup
+backup_dir: "/opt/postgres_backups"
+max_backups: 30      # максимальное число файлов
+full_backup_script: "full_backup.sh"
+inc_backup_script: "inc_backup.sh"
+

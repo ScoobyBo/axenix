@@ -1,3 +1,19 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for postgre_remote
+postgresql_mode: "init"        # init | join
+postgresql_version: "15"
+
+# Для init mode
+data_directory: "/var/lib/postgresql/15/main"
+
+# Для join mode
+primary_host: "10.10.10.10"
+primary_port: 5432
+replication_user: "replicator"
+replication_password: "secret"
+
+# pg_hba rules (список строк)
+pg_hba_rules:
+  - "host all all 0.0.0.0/0 md5"
+  - "host replication replicator 10.0.0.0/24 md5"

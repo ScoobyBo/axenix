@@ -1,3 +1,6 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for postgre_db
+db_name: mydb
+db_owner: myuser
+postgresql_port: 5432

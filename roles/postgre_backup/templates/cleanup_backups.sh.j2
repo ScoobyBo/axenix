@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+BACKUP_DIR="{{ backup_dir }}"
+MAX="{{ max_backups }}"
+
+# Подсчёт количества файлов
+COUNT=$(ls -1 "${BACKUP_DIR}"/*.gz 2>/dev/null | wc -l)
+
+if [ "$COUNT" -le "$MAX" ]; then
+    exit 0
+fi
+
+# Сколько удалить
+REMOVE=$((COUNT - MAX))
+
+# Удаляем самые старые
+ls -1t "${BACKUP_DIR}"/*.gz | tail -n "$REMOVE" | xargs rm -f

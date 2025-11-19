@@ -1,10 +1,74 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for postgre_restore
-- name: скрипт для восстановления из бэкапа
-  ansible.builtin.template:
-    src: restore_db.sh
-    dest: /usr/local/bin/pg_restore_latest.sh
+---
+- name: Check that backup file exists
+  stat:
+    path: "{{ backup_file }}"
+  register: backup_stat
+
+- name: Fail if backup file missing
+  fail:
+    msg: "Backup file '{{ backup_file }}' not found"
+  when: not backup_stat.stat.exists
+
+
+# OPTIONAL: Полная пересборка кластера по желанию
+
+- name: Stop PostgreSQL
+  service:
+    name: postgresql
+    state: stopped
+
+- name: Remove old data directory
+  file:
+    path: "{{ data_directory }}"
+    state: absent
+  when: force_reinit
+
+- name: Re-init cluster
+  command: >
+    /usr/lib/postgresql/{{ postgresql_version }}/bin/initdb
+    -D {{ data_directory }}
+  when: force_reinit
+
+- name: Ensure data directory exists
+  file:
+    path: "{{ data_directory }}"
+    state: directory
     owner: postgres
     group: postgres
-    mode: 0750
+    mode: "0700"
+
+
+# ---- RESTORE ----
+
+- name: Restore from gzip backup
+  become_user: postgres
+  command: >
+    bash -c "gunzip -c {{ backup_file }} | psql"
+  when: backup_file | regex_search('.gz$')
+
+- name: Restore from plain SQL
+  become_user: postgres
+  command: >
+    psql -f {{ backup_file }}
+  when:
+    - backup_file | regex_search('.sql$')
+    - not (backup_file | regex_search('.gz$'))
+
+- name: Restore from custom format backup
+  become_user: postgres
+  command: >
+    pg_restore -d postgres {{ backup_file }}
+  when: backup_file | regex_search('.dump$')
+
+
+# ---- START DB ----
+
+- name: Start PostgreSQL
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+
