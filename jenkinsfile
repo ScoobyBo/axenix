@@ -1,18 +1,13 @@
 pipeline {
     agent any
 
-    environment {
-        INVENTORY = "inventory.ini"
-    }
-
     stages {
 
-        stage('Select Role') {
+        stage('Выбор роли') {
             steps {
                 script {
                     ROLE = input(
-                        id: "role_selector",
-                        message: "Выберите Ansible роль:",
+                        message: 'Какую роль выполнить?',
                         parameters: [
                             choice(
                                 name: 'ROLE_NAME',
@@ -24,6 +19,7 @@ pipeline {
                                     'postgre_remote',
                                     'postgre_restore'
                                 ].join('\n')
+                                description: 'Выберите роль'
                             )
                         ]
                     )
@@ -31,146 +27,106 @@ pipeline {
             }
         }
 
-        stage('Collect Parameters') {
+        stage('Сбор переменных роли') {
             steps {
                 script {
 
-                    if (ROLE == 'postgre_install') {
-                        PARAMS = input(message: "Введите параметры:", parameters: [
-                            string(name: 'PG_VERSION', description: 'Версия PostgreSQL')
-                        ])
-                    }
+                    // --- Переменные под конкретные роли ---
+                    switch (ROLE["ROLE_NAME"]) {
 
-                    if (ROLE == 'postgre_db') {
-                        PARAMS = input(message: "Введите параметры:", parameters: [
-                            string(name: 'DB_NAME', description: 'Имя базы'),
-                            string(name: 'DB_OWNER', description: 'Владелец'),
-                            string(name: 'PG_HOST', defaultValue: '', description: 'Хост (опционально)'),
-                            string(name: 'PG_PORT', defaultValue: '5432', description: 'Порт')
-                        ])
-                    }
+                        case "install_postgres":
+                            params_map = [
+                                postgresql_version: input(
+                                    message: "Версия PostgreSQL:",
+                                    parameters: [
+                                        string(name: 'postgresql_version', defaultValue: '15')
+                                    ]
+                                )
+                            ]
+                            break
 
-                    if (ROLE == 'postgre_users') {
-                        PARAMS = input(message: "Введите параметры:", parameters: [
-                            text(name: 'USERS', description: 'JSON список: [{"name":"u","password":"p"}]')
-                        ])
-                    }
+                        case "init_database":
+                            params_map = input(
+                                message: "Параметры роли init_database",
+                                parameters: [
+                                    string(name: 'db_name', defaultValue: 'mydb'),
+                                    string(name: 'db_owner', defaultValue: 'myuser'),
+                                    string(name: 'postgresql_port', defaultValue: '5432')
+                                ]
+                            )
+                            break
 
-                    if (ROLE == 'postgre_backup') {
-                        PARAMS = input(message: "Введите параметры:", parameters: [
-                            string(name: 'BACKUP_DIR', description: 'Каталог бэкапов'),
-                            string(name: 'MAX_BACKUPS', description: 'Максимум файлов')
-                        ])
-                    }
+                        case "create_users":
+                            params_map = input(
+                                message: "Список пользователей для создания",
+                                parameters: [
+                                    text(name: 'postgresql_users',
+                                         defaultValue: '''[
+  {"name": "appuser", "password": "secret"},
+  {"name": "report", "password": "rep_pass"}
+]'''
+                                    )
+                                ]
+                            )
+                            break
 
-                    if (ROLE == 'postgre_remote') {
-                        PARAMS = input(message: "Введите параметры:", parameters: [
-                            choice(name: 'MODE', choices: ['init', 'join']),
-                            string(name: 'PG_VERSION', description: 'Версия'),
-                            string(name: 'DATA_DIR', description: 'Каталог данных'),
-                            string(name: 'PRIMARY_HOST', defaultValue: '', description: 'join: primary host'),
-                            string(name: 'PRIMARY_PORT', defaultValue: '5432', description: 'join: port'),
-                            string(name: 'REPL_USER', defaultValue: '', description: 'join: user'),
-                            password(name: 'REPL_PASS', defaultValue: '', description: 'join: pass')
-                        ])
-                    }
+                        case "setup_backups":
+                            params_map = input(
+                                message: "Параметры бэкапов",
+                                parameters: [
+                                    string(name: 'backup_dir', defaultValue: '/opt/postgres_backups'),
+                                    string(name: 'max_backups', defaultValue: '30'),
+                                    string(name: 'full_backup_script', defaultValue: 'full_backup.sh'),
+                                    string(name: 'inc_backup_script', defaultValue: 'inc_backup.sh')
+                                ]
+                            )
+                            break
 
-                    if (ROLE == 'postgre_restore') {
-                        PARAMS = input(message: "Введите параметры:", parameters: [
-                            file(name: 'BACKUP_FILE', description: 'Файл бэкапа'),
-                            string(name: 'DATA_DIR', description: 'Каталог данных'),
-                            string(name: 'PG_VERSION', description: 'Версия PostgreSQL'),
-                            booleanParam(name: 'FORCE_REINIT', defaultValue: false, description: 'Удалить старый кластер?')
-                        ])
+                        case "cluster_setup":
+                            params_map = input(
+                                message: "Параметры настройки кластера",
+                                parameters: [
+                                    choice(name: 'postgresql_mode', choices: ['init', 'join']),
+                                    string(name: 'postgresql_version', defaultValue: '15'),
+                                    string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main'),
+                                    string(name: 'primary_host', defaultValue: '10.10.10.10'),
+                                    string(name: 'primary_port', defaultValue: '5432'),
+                                    string(name: 'replication_user', defaultValue: 'replicator'),
+                                    password(name: 'replication_password'),
+                                    text(name: 'pg_hba_rules',
+                                         defaultValue: '''[
+"host all all 0.0.0.0/0 md5",
+"host replication replicator 10.0.0.0/24 md5"
+]'''
+                                    )
+                                ]
+                            )
+                            break
+
+                        case "restore_backup":
+                            params_map = input(
+                                message: "Данные для восстановления",
+                                parameters: [
+                                    file(name: 'backup_file'),
+                                    string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main'),
+                                    string(name: 'postgresql_version', defaultValue: '15'),
+                                    booleanParam(name: 'force_reinit', defaultValue: false)
+                                ]
+                            )
+                            break
                     }
                 }
             }
         }
 
-        stage('Run Ansible') {
+        stage('Выполнение роли') {
             steps {
-                script {
-
-                    // Сборка строки extras для ansible
-                    def extras = ""
-
-                    switch (ROLE) {
-
-                        case 'postgres_install':
-                            extras = "-e postgresql_version=${PARAMS.PG_VERSION}"
-                            ansiblePlaybook(
-                                playbook: "playbooks/postgres_install.yml",
-                                inventory: INVENTORY,
-                                extras: extras
-                            )
-                            break
-
-                        case 'postgres_db_init':
-                            extras = "-e db_name=${PARAMS.DB_NAME} " +
-                                     "-e db_owner=${PARAMS.DB_OWNER} " +
-                                     "-e postgresql_host='${PARAMS.PG_HOST}' " +
-                                     "-e postgresql_port=${PARAMS.PG_PORT}"
-
-                            ansiblePlaybook(
-                                playbook: "playbooks/postgres_db_init.yml",
-                                inventory: INVENTORY,
-                                extras: extras
-                            )
-                            break
-
-                        case 'postgres_users':
-                            writeFile file: "users.json", text: PARAMS.USERS
-                            extras = "-e @users.json"
-                            ansiblePlaybook(
-                                playbook: "playbooks/postgres_users.yml",
-                                inventory: INVENTORY,
-                                extras: extras
-                            )
-                            break
-
-                        case 'postgres_backup_setup':
-                            extras = "-e backup_dir=${PARAMS.BACKUP_DIR} " +
-                                     "-e max_backups=${PARAMS.MAX_BACKUPS}"
-
-                            ansiblePlaybook(
-                                playbook: "playbooks/postgres_backup_setup.yml",
-                                inventory: INVENTORY,
-                                extras: extras
-                            )
-                            break
-
-                        case 'postgres_cluster_setup':
-                            extras =
-                                "-e postgresql_mode=${PARAMS.MODE} " +
-                                "-e postgresql_version=${PARAMS.PG_VERSION} " +
-                                "-e data_directory=${PARAMS.DATA_DIR} " +
-                                "-e primary_host=${PARAMS.PRIMARY_HOST} " +
-                                "-e primary_port=${PARAMS.PRIMARY_PORT} " +
-                                "-e replication_user=${PARAMS.REPL_USER} " +
-                                "-e replication_password='${PARAMS.REPL_PASS}'"
-
-                            ansiblePlaybook(
-                                playbook: "playbooks/postgres_cluster_setup.yml",
-                                inventory: INVENTORY,
-                                extras: extras
-                            )
-                            break
-
-                        case 'postgres_restore':
-                            extras =
-                                "-e backup_file=${WORKSPACE}/${PARAMS.BACKUP_FILE} " +
-                                "-e data_directory=${PARAMS.DATA_DIR} " +
-                                "-e postgresql_version=${PARAMS.PG_VERSION} " +
-                                "-e force_reinit=${PARAMS.FORCE_REINIT}"
-
-                            ansiblePlaybook(
-                                playbook: "playbooks/postgres_restore.yml",
-                                inventory: INVENTORY,
-                                extras: extras
-                            )
-                            break
-                    }
-                }
+                ansiblePlaybook(
+                    playbook: "site.yml",
+                    inventory: "inventory",
+                    extraVars: params_map,
+                    tags: ROLE["ROLE_NAME"]
+                )
             }
         }
     }
