@@ -2,43 +2,32 @@
 ---
 # tasks file for postgre_install
 # Добавляем ключ PGDG
-- name: Install required packages
+# Скачиваем GPG ключ (вместо apt_key)
+- name: Download PostgreSQL GPG key
+  ansible.builtin.get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /usr/share/keyrings/postgresql.gpg
+    mode: '0644'
+
+# Добавляем репозиторий с использованием signed-by
+- name: Add PostgreSQL repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+    state: present
+    filename: pgdg
+
+# Устанавливаем необходимые пакеты
+- name: Install PostgreSQL client and Python dependencies
   ansible.builtin.apt:
     name:
-      - gnupg
-      - ca-certificates
+      - postgresql-client
+      - python3-psycopg2
+      - python3-pip
     state: present
+    update_cache: yes
 
-- name: Add PostgreSQL repository (with fallback)
-  block:
-    - name: Try primary PostgreSQL repository
-      ansible.builtin.apt_repository:
-        repo: "deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
-        state: present
-        filename: postgresql
-        update_cache: yes
-      register: repo_result
-      ignore_errors: yes
-
-    - name: Try with HTTPS if HTTP failed
-      ansible.builtin.apt_repository:
-        repo: "deb https://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
-        state: present
-        filename: postgresql
-        update_cache: yes
-      when: repo_result is failed
-      ignore_errors: yes
-
-  rescue:
-    - name: Use system PostgreSQL if repository unavailable
-      ansible.builtin.debug:
-        msg: "PostgreSQL repository unavailable, using system packages"
-
-    - name: Install PostgreSQL from system repositories
-      ansible.builtin.apt:
-        name:
-          - postgresql
-          - postgresql-client
-          - python3-psycopg2
-          - python3-pip
-        state: present
+# Установка PostgreSQL указанной версии
+- name: Install PostgreSQL {{ postgresql_version }}
+  ansible.builtin.apt:
+    name: "postgresql-{{ postgresql_version }}"
+    state: present
