@@ -32,7 +32,7 @@ pipeline {
                 script {
 
                     // --- Переменные под конкретные роли ---
-                    switch (ROLE["ROLE_NAME"]) {
+                    switch (ROLE) {
 
                         case "install_postgres":
                             params_map = [
@@ -125,7 +125,7 @@ pipeline {
                     playbook: "site.yml",
                     inventory: "inventory",
                     extraVars: params_map,
-                    tags: ROLE["ROLE_NAME"]
+                    tags: ROLE
                 )
             }
         }
