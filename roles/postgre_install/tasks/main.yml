@@ -28,7 +28,8 @@
       Components: main
       Signed-By: /etc/apt/keyrings/postgresql.asc
     state: present
-    filename: postgresql
+    mode: 0644
+    update_cache: no
 
 # Обновляем кэш пакетов после добавления репозитория
 - name: Update package cache
