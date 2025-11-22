@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        ROLE = ""
+    }
+
     stages {
 
         stage('Выбор роли') {
@@ -13,16 +17,16 @@ pipeline {
                                 name: 'ROLE_NAME',
                                 choices: [
                                     'postgre_install',
-                                    'postgre_db',  
+                                    'postgre_db',
                                     'postgre_users',
                                     'postgre_backup',
                                     'postgre_remote',
                                     'postgre_restore'
                                 ].join('\n')
-                                
                             )
                         ]
                     )
+                    echo "Выбрана роль: ${ROLE}"
                 }
             }
         }
@@ -31,23 +35,23 @@ pipeline {
             steps {
                 script {
 
-                    // --- Переменные под конкретные роли ---
+                    // создаем переменную заранее
+                    params_map = [:]
+
                     switch (ROLE) {
 
-                        case "install_postgres":
-                            params_map = [
-                                postgresql_version: input(
-                                    message: "Версия PostgreSQL:",
-                                    parameters: [
-                                        string(name: 'postgresql_version', defaultValue: '15')
-                                    ]
-                                )
-                            ]
+                        case "postgre_install":
+                            params_map = input(
+                                message: "Параметры установки PostgreSQL",
+                                parameters: [
+                                    string(name: 'postgresql_version', defaultValue: '15')
+                                ]
+                            )
                             break
 
-                        case "init_database":
+                        case "postgre_db":
                             params_map = input(
-                                message: "Параметры роли init_database",
+                                message: "Параметры создания БД",
                                 parameters: [
                                     string(name: 'db_name', defaultValue: 'mydb'),
                                     string(name: 'db_owner', defaultValue: 'myuser'),
@@ -56,23 +60,23 @@ pipeline {
                             )
                             break
 
-                        case "create_users":
+                        case "postgre_users":
                             params_map = input(
-                                message: "Список пользователей для создания",
+                                message: "Список пользователей PostgreSQL",
                                 parameters: [
                                     text(name: 'postgresql_users',
                                          defaultValue: '''[
-  {"name": "appuser", "password": "secret"},
-  {"name": "report", "password": "rep_pass"}
+{"name":"app","password":"app123"},
+{"name":"report","password":"rep123"}
 ]'''
                                     )
                                 ]
                             )
                             break
 
-                        case "setup_backups":
+                        case "postgre_backup":
                             params_map = input(
-                                message: "Параметры бэкапов",
+                                message: "Настройки бэкапов",
                                 parameters: [
                                     string(name: 'backup_dir', defaultValue: '/opt/postgres_backups'),
                                     string(name: 'max_backups', defaultValue: '30'),
@@ -82,9 +86,9 @@ pipeline {
                             )
                             break
 
-                        case "cluster_setup":
+                        case "postgre_remote":
                             params_map = input(
-                                message: "Параметры настройки кластера",
+                                message: "Параметры настройки удаленного доступа",
                                 parameters: [
                                     choice(name: 'postgresql_mode', choices: ['init', 'join']),
                                     string(name: 'postgresql_version', defaultValue: '15'),
@@ -103,9 +107,9 @@ pipeline {
                             )
                             break
 
-                        case "restore_backup":
+                        case "postgre_restore":
                             params_map = input(
-                                message: "Данные для восстановления",
+                                message: "Восстановление из бэкапа",
                                 parameters: [
                                     file(name: 'backup_file'),
                                     string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main'),
@@ -115,6 +119,8 @@ pipeline {
                             )
                             break
                     }
+
+                    echo "Полученные параметры: ${params_map}"
                 }
             }
         }
