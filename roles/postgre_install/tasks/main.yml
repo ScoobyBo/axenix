@@ -2,31 +2,40 @@
 ---
 # tasks file for postgre_install
 # Добавляем ключ PGDG
-- name: Add PostgreSQL APT repo key
-  ansible.builtin.apt_key:
+- name: Download PostgreSQL repository key
+  ansible.builtin.get_url:
     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
-    state: present
+    dest: /etc/apt/trusted.gpg.d/postgresql.asc
+    mode: '0644'
 
 # Добавляем репозиторий
 - name: Add PostgreSQL repository
   ansible.builtin.apt_repository:
-    repo: "deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+    repo: "deb https://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
     state: present
+    filename: postgresql
+
+# Обновляем кэш пакетов после добавления репозитория
+- name: Update package cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
 
 # Устанавливаем клиент, psycopg2 и pip
 - name: Install PostgreSQL client and Python dependencies
   ansible.builtin.apt:
     name:
-      - postgresql-client
+      - postgresql-client-{{ postgresql_version }}
       - python3-psycopg2
       - python3-pip
     state: present
-    update_cache: yes
 
 # Установка PostgreSQL указанной версии
 - name: Install PostgreSQL {{ postgresql_version }}
   ansible.builtin.apt:
-    name: "postgresql-{{ postgresql_version }}"
+    name:
+      - "postgresql-{{ postgresql_version }}"
+      - "postgresql-contrib-{{ postgresql_version }}"
     state: present
 
 

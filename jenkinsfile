@@ -16,7 +16,7 @@ pipeline {
                                 name: 'ROLE_NAME',
                                 choices: [
                                     'postgre_install',
-                                    'postgre_db',  
+                                    'postgre_db',
                                     'postgre_users',
                                     'postgre_backup',
                                     'postgre_remote',
@@ -32,7 +32,8 @@ pipeline {
         stage('Сбор переменных роли') {
             steps {
                 script {
-                    switch (ROLE["ROLE_NAME"]) {
+
+                    switch (ROLE) {
 
                         case "postgre_install":
                             params_map = input(
@@ -97,7 +98,7 @@ pipeline {
                     playbook: "site.yml",
                     inventory: "inventory",
                     extraVars: params_map,
-                    tags: ROLE["ROLE_NAME"]
+                    tags: ROLE
                 )
             }
         }
