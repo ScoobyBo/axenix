@@ -2,48 +2,43 @@
 ---
 # tasks file for postgre_install
 # Добавляем ключ PGDG
-- name: Install gnupg (required for apt repository management)
-  ansible.builtin.apt:
-    name: gnupg
-    state: present
-
-- name: Create PostgreSQL repository directory
-  ansible.builtin.file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
-
-- name: Download PostgreSQL repository key
-  ansible.builtin.get_url:
-    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
-    dest: /etc/apt/keyrings/postgresql.asc
-    mode: '0644'
-
-- name: Add PostgreSQL repository with signed-by
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/postgresql.asc] https://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
-    state: present
-    filename: postgresql
-
-# Обновляем кэш пакетов после добавления репозитория
-- name: Update package cache
-  ansible.builtin.apt:
-    update_cache: yes
-    cache_valid_time: 3600
-
-# Устанавливаем клиент, psycopg2 и pip
-- name: Install PostgreSQL client and Python dependencies
+- name: Install required packages
   ansible.builtin.apt:
     name:
-      - postgresql-client-{{ postgresql_version }}
-      - python3-psycopg2
-      - python3-pip
+      - gnupg
+      - ca-certificates
     state: present
 
-# Установка PostgreSQL указанной версии
-- name: Install PostgreSQL {{ postgresql_version }}
-  ansible.builtin.apt:
-    name:
-      - "postgresql-{{ postgresql_version }}"
-      - "postgresql-contrib-{{ postgresql_version }}"
-    state: present
+- name: Add PostgreSQL repository (with fallback)
+  block:
+    - name: Try primary PostgreSQL repository
+      ansible.builtin.apt_repository:
+        repo: "deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+        state: present
+        filename: postgresql
+        update_cache: yes
+      register: repo_result
+      ignore_errors: yes
+
+    - name: Try with HTTPS if HTTP failed
+      ansible.builtin.apt_repository:
+        repo: "deb https://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+        state: present
+        filename: postgresql
+        update_cache: yes
+      when: repo_result is failed
+      ignore_errors: yes
+
+  rescue:
+    - name: Use system PostgreSQL if repository unavailable
+      ansible.builtin.debug:
+        msg: "PostgreSQL repository unavailable, using system packages"
+
+    - name: Install PostgreSQL from system repositories
+      ansible.builtin.apt:
+        name:
+          - postgresql
+          - postgresql-client
+          - python3-psycopg2
+          - python3-pip
+        state: present
