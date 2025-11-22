@@ -1,9 +1,8 @@
+def params_map = [:]
+def ROLE = ""
+
 pipeline {
     agent any
-
-    environment {
-        ROLE = ""
-    }
 
     stages {
 
@@ -17,7 +16,7 @@ pipeline {
                                 name: 'ROLE_NAME',
                                 choices: [
                                     'postgre_install',
-                                    'postgre_db',
+                                    'postgre_db',  
                                     'postgre_users',
                                     'postgre_backup',
                                     'postgre_remote',
@@ -26,7 +25,6 @@ pipeline {
                             )
                         ]
                     )
-                    echo "Выбрана роль: ${ROLE}"
                 }
             }
         }
@@ -34,15 +32,11 @@ pipeline {
         stage('Сбор переменных роли') {
             steps {
                 script {
-
-                    // создаем переменную заранее
-                    params_map = [:]
-
-                    switch (ROLE) {
+                    switch (ROLE["ROLE_NAME"]) {
 
                         case "postgre_install":
                             params_map = input(
-                                message: "Параметры установки PostgreSQL",
+                                message: "Параметры установки PostgreSQL:",
                                 parameters: [
                                     string(name: 'postgresql_version', defaultValue: '15')
                                 ]
@@ -51,23 +45,22 @@ pipeline {
 
                         case "postgre_db":
                             params_map = input(
-                                message: "Параметры создания БД",
+                                message: "Настройка DB:",
                                 parameters: [
                                     string(name: 'db_name', defaultValue: 'mydb'),
-                                    string(name: 'db_owner', defaultValue: 'myuser'),
-                                    string(name: 'postgresql_port', defaultValue: '5432')
+                                    string(name: 'db_owner', defaultValue: 'myuser')
                                 ]
                             )
                             break
 
                         case "postgre_users":
                             params_map = input(
-                                message: "Список пользователей PostgreSQL",
+                                message: "Пользователи:",
                                 parameters: [
                                     text(name: 'postgresql_users',
                                          defaultValue: '''[
-{"name":"app","password":"app123"},
-{"name":"report","password":"rep123"}
+  {"name": "appuser", "password": "secret"},
+  {"name": "report", "password": "rep_pass"}
 ]'''
                                     )
                                 ]
@@ -76,51 +69,24 @@ pipeline {
 
                         case "postgre_backup":
                             params_map = input(
-                                message: "Настройки бэкапов",
+                                message: "Параметры backup:",
                                 parameters: [
                                     string(name: 'backup_dir', defaultValue: '/opt/postgres_backups'),
-                                    string(name: 'max_backups', defaultValue: '30'),
-                                    string(name: 'full_backup_script', defaultValue: 'full_backup.sh'),
-                                    string(name: 'inc_backup_script', defaultValue: 'inc_backup.sh')
-                                ]
-                            )
-                            break
-
-                        case "postgre_remote":
-                            params_map = input(
-                                message: "Параметры настройки удаленного доступа",
-                                parameters: [
-                                    choice(name: 'postgresql_mode', choices: ['init', 'join']),
-                                    string(name: 'postgresql_version', defaultValue: '15'),
-                                    string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main'),
-                                    string(name: 'primary_host', defaultValue: '10.10.10.10'),
-                                    string(name: 'primary_port', defaultValue: '5432'),
-                                    string(name: 'replication_user', defaultValue: 'replicator'),
-                                    password(name: 'replication_password'),
-                                    text(name: 'pg_hba_rules',
-                                         defaultValue: '''[
-"host all all 0.0.0.0/0 md5",
-"host replication replicator 10.0.0.0/24 md5"
-]'''
-                                    )
+                                    string(name: 'max_backups', defaultValue: '30')
                                 ]
                             )
                             break
 
                         case "postgre_restore":
                             params_map = input(
-                                message: "Восстановление из бэкапа",
+                                message: "Параметры восстановления:",
                                 parameters: [
                                     file(name: 'backup_file'),
-                                    string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main'),
-                                    string(name: 'postgresql_version', defaultValue: '15'),
-                                    booleanParam(name: 'force_reinit', defaultValue: false)
+                                    string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main')
                                 ]
                             )
                             break
                     }
-
-                    echo "Полученные параметры: ${params_map}"
                 }
             }
         }
@@ -131,7 +97,7 @@ pipeline {
                     playbook: "site.yml",
                     inventory: "inventory",
                     extraVars: params_map,
-                    tags: ROLE
+                    tags: ROLE["ROLE_NAME"]
                 )
             }
         }
