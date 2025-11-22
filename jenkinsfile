@@ -13,13 +13,13 @@ pipeline {
                                 name: 'ROLE_NAME',
                                 choices: [
                                     'postgre_install',
-                                    'postgre_db',
+                                    'postgre_db',  
                                     'postgre_users',
                                     'postgre_backup',
                                     'postgre_remote',
                                     'postgre_restore'
                                 ].join('\n')
-                                description: 'Выберите роль'
+                                
                             )
                         ]
                     )
