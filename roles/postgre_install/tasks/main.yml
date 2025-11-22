@@ -2,16 +2,31 @@
 ---
 # tasks file for postgre_install
 # Добавляем ключ PGDG
+- name: Install gnupg (required for apt repository management)
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+
+- name: Create PostgreSQL repository directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
 - name: Download PostgreSQL repository key
   ansible.builtin.get_url:
     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
-    dest: /etc/apt/trusted.gpg.d/postgresql.asc
+    dest: /etc/apt/keyrings/postgresql.asc
     mode: '0644'
 
-# Добавляем репозиторий
-- name: Add PostgreSQL repository
+- name: Add PostgreSQL repository using deb822 format
   ansible.builtin.apt_repository:
-    repo: "deb https://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+    repo: |-
+      Types: deb
+      URIs: https://apt.postgresql.org/pub/repos/apt/
+      Suites: {{ ansible_distribution_release }}-pgdg
+      Components: main
+      Signed-By: /etc/apt/keyrings/postgresql.asc
     state: present
     filename: postgresql
 
@@ -37,5 +52,3 @@
       - "postgresql-{{ postgresql_version }}"
       - "postgresql-contrib-{{ postgresql_version }}"
     state: present
-
-
