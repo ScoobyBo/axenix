@@ -1,32 +1,21 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for postgre_install
-- name: Ensure keyrings directory exists
-  ansible.builtin.file:
-    path: /usr/share/keyrings
-    state: directory
-    mode: '0755'
-
-# 1. Скачиваем GPG ключ PGDG
+# Скачиваем GPG ключ (вместо apt_key)
 - name: Download PostgreSQL GPG key
   ansible.builtin.get_url:
     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
     dest: /usr/share/keyrings/postgresql.gpg
     mode: '0644'
 
-# 2. Добавляем репозиторий PGDG
-- name: Add PostgreSQL repository (Debian 12 Bookworm)
+# Добавляем репозиторий с использованием signed-by
+- name: Add PostgreSQL repository
   ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main"
-    filename: pgdg
+    repo: "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
     state: present
+    filename: pgdg
 
-# 3. Обновляем кеш
-- name: Update apt cache
-  ansible.builtin.apt:
-    update_cache: yes
-
-# 4. Устанавливаем клиент и зависимости Python
+# Устанавливаем необходимые пакеты
 - name: Install PostgreSQL client and Python dependencies
   ansible.builtin.apt:
     name:
@@ -34,8 +23,9 @@
       - python3-psycopg2
       - python3-pip
     state: present
+    update_cache: yes
 
-# 5. Устанавливаем PostgreSQL конкретной версии
+# Установка PostgreSQL указанной версии
 - name: Install PostgreSQL {{ postgresql_version }}
   ansible.builtin.apt:
     name: "postgresql-{{ postgresql_version }}"
