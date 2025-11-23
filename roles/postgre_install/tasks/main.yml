@@ -7,34 +7,35 @@
     state: directory
     mode: '0755'
 
-# Правильный GPG key (binary), НЕ .asc
-- name: Download PostgreSQL GPG key in binary format
+# 1. GPG key (ASCII — корректный!)
+- name: Download PostgreSQL GPG key
   ansible.builtin.get_url:
-    url: https://www.postgresql.org/media/keys/ACCC4CF8.gpg
-    dest: /usr/share/keyrings/postgresql.gpg
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /usr/share/keyrings/postgresql.asc
     mode: '0644'
 
-- name: Add PostgreSQL repository (Debian 12 Bookworm)
+# 2. Add PGDG repo for Debian 12 (bookworm)
+- name: Add PostgreSQL repository for Debian 12
   ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main"
+    repo: "deb [signed-by=/usr/share/keyrings/postgresql.asc] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main"
     filename: pgdg
     state: present
 
+# 3. Update apt cache
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: yes
-    
-# Устанавливаем необходимые пакеты
-- name: Install PostgreSQL client and Python dependencies
+
+# 4. Install PostgreSQL client and Python libs
+- name: Install PostgreSQL client and Python libs
   ansible.builtin.apt:
     name:
       - postgresql-client
       - python3-psycopg2
       - python3-pip
     state: present
-    update_cache: yes
 
-# Установка PostgreSQL указанной версии
+# 5. Install PostgreSQL server
 - name: Install PostgreSQL {{ postgresql_version }}
   ansible.builtin.apt:
     name: "postgresql-{{ postgresql_version }}"
