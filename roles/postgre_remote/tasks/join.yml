@@ -25,7 +25,7 @@
     -U {{ replication_user }}
     -D {{ data_directory }}
     -R
-  become_user: postgres
+  
   environment:
     PGPASSWORD: "{{ replication_password }}"
 
