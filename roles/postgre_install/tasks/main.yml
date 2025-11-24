@@ -42,12 +42,11 @@
     state: present
   
 - name: Create replication user
-  
   community.postgresql.postgresql_user:
     name: "{{ replication_user }}"
     password: "{{ replication_password }}"
     role_attr_flags: "REPLICATION"
-  become_user: postgres
+  become_user: ansible
   
 - name: Configure postgresql.conf for replication
   ansible.builtin.blockinfile:
