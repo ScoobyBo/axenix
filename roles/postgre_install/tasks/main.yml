@@ -46,8 +46,8 @@
     name: "{{ replication_user }}"
     password: "{{ replication_password }}"
     role_attr_flags: "REPLICATION"
-  become_user: ansible
-  
+  become_user: postgres
+  become: no
 - name: Configure postgresql.conf for replication
   ansible.builtin.blockinfile:
     path: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
