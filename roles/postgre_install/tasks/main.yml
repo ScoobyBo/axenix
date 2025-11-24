@@ -42,11 +42,12 @@
     state: present
   
 - name: Create replication user
-  become_user: postgres
+  
   community.postgresql.postgresql_user:
     name: "{{ replication_user }}"
     password: "{{ replication_password }}"
     role_attr_flags: "REPLICATION"
+  become_user: postgres
   
 - name: Configure postgresql.conf for replication
   ansible.builtin.blockinfile:
@@ -57,7 +58,8 @@
       max_replication_slots = 10
       hot_standby = on
       listen_addresses = '*'
-  
+  become_user: postgres
+
 - name: Restart PostgreSQL after config update
   service:
     name: postgresql
