@@ -1,31 +1,151 @@
 pipeline {
     agent any
 
-    parameters {
-        choice(
-            name: 'ROLE',
-            choices: [
-                'postgre_install',
-                'postgre_remote',
-                'postgre_backup',
-                'postgre_db',
-                'postgre_restore',
-                'postgre_users'
-            ],
-            description: 'Выберите Ansible роль'
-        )
-    }
-
     stages {
-        stage('Run Selected Role') {
+
+        stage('Select Role') {
             steps {
                 script {
-                    echo "Выбрана роль: ${params.ROLE}"
+                    ROLE = input(
+                        message: 'Выберите Ansible роль',
+                        parameters: [
+                            choice(
+                                name: 'ROLE',
+                                choices: [
+                                    'postgre_install',
+                                    'postgre_remote',
+                                    'postgre_backup',
+                                    'postgre_db',
+                                    'postgre_restore',
+                                    'postgre_users'
+                                ],
+                                description: 'Какая роль Ansible должна быть выполнена'
+                            )
+                        ]
+                    )
+                }
+            }
+        }
 
-                    // Запуск дочернего Jenkinsfile
-                    build job: "roles/${params.ROLE}",
-                           propagate: true,
-                           wait: true
+        stage('Collect Parameters and Run Role') {
+            steps {
+                script {
+
+                    if (ROLE == "postgre_install") {
+                        paramsInstall = input(
+                            message: "Параметры postgre_install",
+                            parameters: [
+                                string(name: 'postgresql_version', defaultValue: '15'),
+                                string(name: 'replication_user', defaultValue: 'replicator'),
+                                password(name: 'replication_password'),
+                                string(name: 'replication_network', defaultValue: '10.0.0.0/24'),
+                            ]
+                        )
+
+                        ansiblePlaybook(
+                            playbook: "playbooks/postgre_install.yml",
+                            inventory: "inventary.yml",
+                            extraVars: paramsInstall
+                        )
+                    }
+
+                    if (ROLE == "postgre_remote") {
+                        paramsRemote = input(
+                            message: "Параметры postgre_remote",
+                            parameters: [
+                                string(name: 'postgresql_version', defaultValue: '15'),
+                                string(name: 'data_directory', defaultValue: '/etc/postgresql/15/main'),
+                                string(name: 'primary_host', defaultValue: '10.10.10.10'),
+                                string(name: 'primary_port', defaultValue: '5432'),
+                                string(name: 'replication_user', defaultValue: 'replicator'),
+                                password(name: 'replication_password'),
+                                text(name: 'pg_hba_rules', defaultValue: "host all all 0.0.0.0/0 md5\nhost replication replicator 10.0.0.0/24 md5")
+                            ]
+                        )
+
+                        paramsRemote.pg_hba_rules = paramsRemote.pg_hba_rules.split("\n")
+
+                        ansiblePlaybook(
+                            playbook: "playbooks/postgre_remote.yml",
+                            inventory: "inventary.yml",
+                            extraVars: paramsRemote
+                        )
+                    }
+
+                    if (ROLE == "postgre_backup") {
+                        paramsBackup = input(
+                            message: "Параметры postgre_backup",
+                            parameters: [
+                                string(name: 'backup_dir', defaultValue: '/opt/postgres_backups'),
+                                string(name: 'max_backups', defaultValue: '30'),
+                                string(name: 'full_backup_script', defaultValue: 'full_backup.sh'),
+                                string(name: 'inc_backup_script', defaultValue: 'inc_backup.sh'),
+                            ]
+                        )
+
+                        ansiblePlaybook(
+                            playbook: "playbooks/postgre_backup.yml",
+                            inventory: "inventary.yml",
+                            extraVars: paramsBackup
+                        )
+                    }
+
+                    if (ROLE == "postgre_db") {
+                        paramsDb = input(
+                            message: "Параметры postgre_db",
+                            parameters: [
+                                string(name: 'db_name', defaultValue: 'mydb'),
+                                string(name: 'db_owner', defaultValue: 'myuser'),
+                                string(name: 'postgresql_port', defaultValue: '5432'),
+                            ]
+                        )
+
+                        ansiblePlaybook(
+                            playbook: "playbooks/postgre_db.yml",
+                            inventory: "inventary.yml",
+                            extraVars: paramsDb
+                        )
+                    }
+
+                    if (ROLE == "postgre_restore") {
+                        paramsRestore = input(
+                            message: "Параметры postgre_restore",
+                            parameters: [
+                                string(name: 'backup_file', defaultValue: '/tmp/full_backup.sql.gz'),
+                                string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main'),
+                                string(name: 'postgresql_version', defaultValue: '15'),
+                                string(name: 'restore_db', defaultValue: 'gitea'),
+                                booleanParam(name: 'force_reinit', defaultValue: false)
+                            ]
+                        )
+
+                        ansiblePlaybook(
+                            playbook: "playbooks/postgre_restore.yml",
+                            inventory: "inventary.yml",
+                            extraVars: paramsRestore
+                        )
+                    }
+
+                    if (ROLE == "postgre_users") {
+                        paramsUsers = input(
+                            message: "Параметры postgre_users",
+                            parameters: [
+                                text(name: 'postgresql_users', defaultValue: """
+[
+  {"name": "appuser", "password": "secret123"}
+]
+""")
+                            ]
+                        )
+
+                        ansiblePlaybook(
+                            playbook: "playbooks/postgre_users.yml",
+                            inventory: "inventary.yml",
+                            extraVars: [
+                                postgresql_users: readJSON(text: paramsUsers.postgresql_users)
+                            ]
+                        )
+                    }
                 }
             }
         }
