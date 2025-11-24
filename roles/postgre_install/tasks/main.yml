@@ -41,14 +41,28 @@
     name: "postgresql-{{ postgresql_version }}"
     state: present
   
-- name: Create replication user
+- name: Deploy pg_hba.conf
+  template:
+    src: pg_hba_primary.j2
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0600"
   become_user: postgres
-  become: yes
+
+- name: Reload PostgreSQL
+  service:
+    name: postgresql
+    state: reloaded
+  become_user: postgres
+
+- name: Create replication user
   community.postgresql.postgresql_user:
     name: "{{ replication_user }}"
     password: "{{ replication_password }}"
     role_attr_flags: "REPLICATION"
-  
+    login_user: postgres
+    login_host: localhost
 - name: Configure postgresql.conf for replication
   ansible.builtin.blockinfile:
     path: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
@@ -66,17 +80,3 @@
     state: restarted
   become_user: postgres
 
-- name: Deploy pg_hba.conf
-  template:
-    src: pg_hba_primary.j2
-    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
-    owner: postgres
-    group: postgres
-    mode: "0600"
-  become_user: postgres
-
-- name: Reload PostgreSQL
-  service:
-    name: postgresql
-    state: reloaded
-  become_user: postgres
