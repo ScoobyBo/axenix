@@ -55,6 +55,9 @@
     name: postgresql
     state: reloaded
   
+- name: Wait for PostgreSQL to apply new pg_hba.conf
+  pause:
+    seconds: 5
 
 - name: Create replication user
   community.postgresql.postgresql_user:
