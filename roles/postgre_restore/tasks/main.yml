@@ -49,21 +49,19 @@
   become_user: postgres
   command: >
     bash -c "gunzip -c {{ backup_file }} | psql"
-  when: backup_file | regex_search('.gz$')
+  when: backup_file.endswith('.gz')
 
 - name: Restore from plain SQL
   become_user: postgres
   command: >
     psql -f {{ backup_file }}
-  when:
-    - backup_file | regex_search('.sql$')
-    - not (backup_file | regex_search('.gz$'))
+  when: backup_file.endswith('.sql')
 
 - name: Restore from custom format backup
   become_user: postgres
   command: >
     pg_restore -d postgres {{ backup_file }}
-  when: backup_file | regex_search('.dump$')
+  when: backup_file.endswith('.dump')
 
 # ---- START DB ----
 
