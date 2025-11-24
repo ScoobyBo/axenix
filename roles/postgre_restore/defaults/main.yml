@@ -4,6 +4,7 @@
 backup_file: "/tmp/full_backup.sql.gz"
 data_directory: "/var/lib/postgresql/15/main"
 postgresql_version: "15"
+restore_db: "gitea"
 
 # Если пользователь хочет пересоздать кластер
 force_reinit: false
