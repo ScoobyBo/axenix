@@ -1,0 +1,27 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'backup_dir', defaultValue: '/opt/postgres_backups')
+        string(name: 'max_backups', defaultValue: '30')
+        string(name: 'full_backup_script', defaultValue: 'full_backup.sh')
+        string(name: 'inc_backup_script', defaultValue: 'inc_backup.sh')
+    }
+
+    stages {
+        stage('Run Ansible') {
+            steps {
+                ansiblePlaybook(
+                    playbook: 'playbooks/postgre_backup.yml',
+                    inventory: 'inventary.yml',
+                    extraVars: [
+                        backup_dir: params.backup_dir,
+                        max_backups: params.max_backups,
+                        full_backup_script: params.full_backup_script,
+                        inc_backup_script: params.inc_backup_script
+                    ]
+                )
+            }
+        }
+    }
+}

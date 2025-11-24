@@ -1,0 +1,25 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'db_name', defaultValue: 'mydb')
+        string(name: 'db_owner', defaultValue: 'myuser')
+        string(name: 'postgresql_port', defaultValue: '5432')
+    }
+
+    stages {
+        stage('Run Ansible') {
+            steps {
+                ansiblePlaybook(
+                    playbook: 'playbooks/postgre_db.yml',
+                    inventory: 'inventary.yml',
+                    extraVars: [
+                        db_name: params.db_name,
+                        db_owner: params.db_owner,
+                        postgresql_port: params.postgresql_port
+                    ]
+                )
+            }
+        }
+    }
+}

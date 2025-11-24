@@ -1,0 +1,27 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'postgresql_version', defaultValue: '15')
+        string(name: 'replication_user', defaultValue: 'replicator')
+        password(name: 'replication_password', defaultValue: 'secret')
+        string(name: 'replication_network', defaultValue: '10.0.0.0/24')
+    }
+
+    stages {
+        stage('Run Ansible') {
+            steps {
+                ansiblePlaybook(
+                    playbook: 'playbooks/postgre_install.yml',
+                    inventory: 'inventary.yml',
+                    extraVars: [
+                        postgresql_version: params.postgresql_version,
+                        replication_user: params.replication_user,
+                        replication_password: params.replication_password,
+                        replication_network: params.replication_network
+                    ]
+                )
+            }
+        }
+    }
+}
