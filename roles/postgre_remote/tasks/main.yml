@@ -1,21 +1,8 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for postgre_remote
-- name: Ensure required packages are installed
-  apt:
-    name:
-      - postgresql-{{ postgresql_version }}
-      - postgresql-client-{{ postgresql_version }}
-    state: present
-    update_cache: yes
-
-- name: Run initdb mode tasks
-  include_tasks: init.yml
-  when: postgresql_mode == "init"
-
 - name: Run join mode tasks
   include_tasks: join.yml
-  when: postgresql_mode == "join"
 
 - name: Configure pg_hba
   include_tasks: pg_hba.yml

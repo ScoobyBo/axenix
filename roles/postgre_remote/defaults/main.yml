@@ -1,11 +1,10 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for postgre_remote
-postgresql_mode: "init"        # init | join
+    # init 
 postgresql_version: "15"
 
-# Для init mode
-data_directory: "/var/lib/postgresql/15/main"
+data_directory: "/etc/postgresql/{{ postgresql_version }}/main"
 
 # Для join mode
 primary_host: "10.10.10.10"

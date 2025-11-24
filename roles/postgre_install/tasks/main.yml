@@ -20,7 +20,7 @@
     repo: "deb [signed-by=/usr/share/keyrings/postgresql.asc] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main"
     filename: pgdg
     state: present
-
+  
 # 3. Update apt cache
 - name: Update apt cache
   ansible.builtin.apt:
@@ -40,3 +40,40 @@
   ansible.builtin.apt:
     name: "postgresql-{{ postgresql_version }}"
     state: present
+
+- name: Create replication user
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: "{{ replication_user }}"
+    password: "{{ replication_password }}"
+    role_attr_flags: "REPLICATION"
+
+- name: Configure postgresql.conf for replication
+  ansible.builtin.blockinfile:
+    path: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    block: |
+      wal_level = replica
+      max_wal_senders = 10
+      max_replication_slots = 10
+      hot_standby = on
+      listen_addresses = '*'
+  
+- name: Restart PostgreSQL after config update
+  service:
+    name: postgresql
+    state: restarted
+
+
+- name: Deploy pg_hba.conf
+  template:
+    src: pg_hba_primary.j2
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0600"
+  
+
+- name: Reload PostgreSQL
+  service:
+    name: postgresql
+    state: reloaded

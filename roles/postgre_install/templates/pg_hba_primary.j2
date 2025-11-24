@@ -1,0 +1,8 @@
+# Allow local connections
+local   all             all                                                    peer
+
+# Allow replication
+host    replication     {{ replication_user }}    {{ replication_network }}    md5
+
+# Allow access for applications
+host    all             all                        0.0.0.0/0                   md5

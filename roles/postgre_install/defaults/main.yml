@@ -2,3 +2,7 @@
 ---
 # defaults file for postgre_install
 postgresql_version: 15
+replication_user: replicator
+replication_password: secret
+replication_network: "10.0.0.0/24"
+
