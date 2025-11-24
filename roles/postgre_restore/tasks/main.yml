@@ -19,18 +19,21 @@
   service:
     name: postgresql
     state: stopped
+  become_user: postgres
 
 - name: Remove old data directory
   file:
     path: "{{ data_directory }}"
     state: absent
   when: force_reinit
+  become_user: postgres
 
 - name: Re-init cluster
   command: >
     /usr/lib/postgresql/{{ postgresql_version }}/bin/initdb
     -D {{ data_directory }}
   when: force_reinit
+  become_user: postgres
 
 - name: Ensure data directory exists
   file:
@@ -39,6 +42,7 @@
     owner: postgres
     group: postgres
     mode: "0700"
+  become_user: postgres
 
 
 # ---- RESTORE ----
