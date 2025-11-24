@@ -54,9 +54,7 @@ pipeline {
                                 message: 'Parameters for postgre_backup',
                                 parameters: [
                                     string(name: 'backup_dir', defaultValue: '/opt/postgres_backups'),
-                                    string(name: 'max_backups', defaultValue: '30'),
-                                    string(name: 'full_backup_script', defaultValue: 'full_backup.sh'),
-                                    string(name: 'inc_backup_script', defaultValue: 'inc_backup.sh')
+                                    string(name: 'max_backups', defaultValue: '30')
                                 ]
                             )
                             break
