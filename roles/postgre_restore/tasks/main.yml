@@ -63,19 +63,20 @@
 - name: Restore from gzip backup
   become_user: postgres
   command: >
-    bash -c "gunzip -c {{ backup_file }} | psql"
+    bash -c "gunzip -c {{ backup_file }} | psql -d {{ restore_db }}"
   when: backup_file.endswith('.gz')
 
 - name: Restore from plain SQL
   become_user: postgres
   command: >
-    psql -f {{ backup_file }}
+    psql -d {{ restore_db }} -f {{ backup_file }}
   when: backup_file.endswith('.sql')
+
 
 - name: Restore from custom format backup
   become_user: postgres
   command: >
-    pg_restore -d postgres {{ backup_file }}
+    pg_restore -d {{ restore_db }} {{ backup_file }}
   when: backup_file.endswith('.dump')
 
 # ---- START DB ----
