@@ -12,7 +12,7 @@ pipeline {
                 'postgre_restore',
                 'postgre_users'
             ],
-            description: 'Выберите Ansible роль для запуска'
+            description: 'Select Ansible role'
         )
     }
 
@@ -24,7 +24,7 @@ pipeline {
 
                         case 'postgre_install':
                             PARAMS = input(
-                                message: 'Введите параметры для postgre_install',
+                                message: 'Parameters for postgre_install',
                                 parameters: [
                                     string(name: 'postgresql_version', defaultValue: '15'),
                                     string(name: 'replication_user', defaultValue: 'replicator'),
@@ -36,7 +36,7 @@ pipeline {
 
                         case 'postgre_remote':
                             PARAMS = input(
-                                message: 'Введите параметры для postgre_remote',
+                                message: 'Parameters for postgre_remote',
                                 parameters: [
                                     string(name: 'postgresql_version', defaultValue: '15'),
                                     string(name: 'data_directory', defaultValue: '/etc/postgresql/15/main'),
@@ -51,7 +51,7 @@ pipeline {
 
                         case 'postgre_backup':
                             PARAMS = input(
-                                message: 'Введите параметры для postgre_backup',
+                                message: 'Parameters for postgre_backup',
                                 parameters: [
                                     string(name: 'backup_dir', defaultValue: '/opt/postgres_backups'),
                                     string(name: 'max_backups', defaultValue: '30'),
@@ -63,7 +63,7 @@ pipeline {
 
                         case 'postgre_db':
                             PARAMS = input(
-                                message: 'Введите параметры для postgre_db',
+                                message: 'Parameters for postgre_db',
                                 parameters: [
                                     string(name: 'db_name', defaultValue: 'mydb'),
                                     string(name: 'db_owner', defaultValue: 'myuser'),
@@ -74,7 +74,7 @@ pipeline {
 
                         case 'postgre_restore':
                             PARAMS = input(
-                                message: 'Введите параметры для postgre_restore',
+                                message: 'Parameters for postgre_restore',
                                 parameters: [
                                     string(name: 'backup_file', defaultValue: '/tmp/full_backup.sql.gz'),
                                     string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main'),
@@ -87,9 +87,14 @@ pipeline {
 
                         case 'postgre_users':
                             PARAMS = input(
-                                message: 'Введите JSON список пользователей postgre_users',
+                                message: 'Parameters for postgre_users',
                                 parameters: [
-                                    text(name: 'postgresql_users', defaultValue: '[{"name":"appuser","password":"secret123"}]')
+                                    string(name: 'user1_name', defaultValue: 'appuser'),
+                                    password(name: 'user1_password', defaultValue: 'secret123'),
+                                    string(name: 'user2_name', defaultValue: ''),
+                                    password(name: 'user2_password', defaultValue: ''),
+                                    string(name: 'user3_name', defaultValue: ''),
+                                    password(name: 'user3_password', defaultValue: '')
                                 ]
                             )
                             break
@@ -101,12 +106,50 @@ pipeline {
         stage('Run Ansible Role') {
             steps {
                 script {
-                    ansiblePlaybook(
-                        playbook: "${ROLE}.yml",
-                        inventory: "inventary.yml",
-                        extraVars: PARAMS,
-                        colorized: true
-                    )
+                    // Обработка параметров для postgre_users
+                    if (ROLE == 'postgre_users') {
+                        def usersList = []
+                        
+                        // Добавляем пользователей, если указаны имена
+                        if (PARAMS.user1_name) {
+                            usersList.add([
+                                name: PARAMS.user1_name,
+                                password: PARAMS.user1_password
+                            ])
+                        }
+                        if (PARAMS.user2_name) {
+                            usersList.add([
+                                name: PARAMS.user2_name,
+                                password: PARAMS.user2_password
+                            ])
+                        }
+                        if (PARAMS.user3_name) {
+                            usersList.add([
+                                name: PARAMS.user3_name,
+                                password: PARAMS.user3_password
+                            ])
+                        }
+                        
+                        // Создаем финальные параметры для Ansible
+                        def finalParams = [
+                            postgresql_users: usersList
+                        ]
+                        
+                        ansiblePlaybook(
+                            playbook: "${ROLE}.yml",
+                            inventory: "inventary.yml",
+                            extraVars: finalParams,
+                            colorized: true
+                        )
+                    } else {
+                        // Для всех остальных ролей используем PARAMS как есть
+                        ansiblePlaybook(
+                            playbook: "${ROLE}.yml",
+                            inventory: "inventary.yml",
+                            extraVars: PARAMS,
+                            colorized: true
+                        )
+                    }
                 }
             }
         }
