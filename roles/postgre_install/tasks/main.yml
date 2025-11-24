@@ -54,7 +54,7 @@
   service:
     name: postgresql
     state: reloaded
-  become_user: postgres
+  
 
 - name: Create replication user
   community.postgresql.postgresql_user:
@@ -78,5 +78,5 @@
   service:
     name: postgresql
     state: restarted
-  become_user: postgres
+  
 
