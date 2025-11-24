@@ -89,12 +89,8 @@ pipeline {
                             PARAMS = input(
                                 message: 'Parameters for postgre_users',
                                 parameters: [
-                                    string(name: 'user1_name', defaultValue: 'appuser'),
-                                    password(name: 'user1_password', defaultValue: 'secret123'),
-                                    string(name: 'user2_name', defaultValue: ''),
-                                    password(name: 'user2_password', defaultValue: ''),
-                                    string(name: 'user3_name', defaultValue: ''),
-                                    password(name: 'user3_password', defaultValue: '')
+                                    string(name: 'postgresql_user_name', defaultValue: 'appuser'),
+                                    password(name: 'postgresql_user_password', defaultValue: 'secret123')
                                 ]
                             )
                             break
@@ -106,50 +102,12 @@ pipeline {
         stage('Run Ansible Role') {
             steps {
                 script {
-                    // Обработка параметров для postgre_users
-                    if (ROLE == 'postgre_users') {
-                        def usersList = []
-                        
-                        // Добавляем пользователей, если указаны имена
-                        if (PARAMS.user1_name) {
-                            usersList.add([
-                                name: PARAMS.user1_name,
-                                password: PARAMS.user1_password
-                            ])
-                        }
-                        if (PARAMS.user2_name) {
-                            usersList.add([
-                                name: PARAMS.user2_name,
-                                password: PARAMS.user2_password
-                            ])
-                        }
-                        if (PARAMS.user3_name) {
-                            usersList.add([
-                                name: PARAMS.user3_name,
-                                password: PARAMS.user3_password
-                            ])
-                        }
-                        
-                        // Создаем финальные параметры для Ansible
-                        def finalParams = [
-                            postgresql_users: usersList
-                        ]
-                        
-                        ansiblePlaybook(
-                            playbook: "${ROLE}.yml",
-                            inventory: "inventary.yml",
-                            extraVars: finalParams,
-                            colorized: true
-                        )
-                    } else {
-                        // Для всех остальных ролей используем PARAMS как есть
-                        ansiblePlaybook(
-                            playbook: "${ROLE}.yml",
-                            inventory: "inventary.yml",
-                            extraVars: PARAMS,
-                            colorized: true
-                        )
-                    }
+                    ansiblePlaybook(
+                        playbook: "${ROLE}.yml",
+                        inventory: "inventary.yml",
+                        extraVars: PARAMS,
+                        colorized: true
+                    )
                 }
             }
         }
