@@ -1,32 +1,32 @@
 #SPDX-License-Identifier: MIT-0
 ---
-# tasks file for postgre_install
+
 - name: Ensure keyrings directory exists
   ansible.builtin.file:
     path: /usr/share/keyrings
     state: directory
     mode: '0755'
   
-# 1. GPG key (ASCII — корректный!)
+
 - name: Download PostgreSQL GPG key
   ansible.builtin.get_url:
     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
     dest: /usr/share/keyrings/postgresql.asc
     mode: '0644'
   
-# 2. Add PGDG repo for Debian 12 (bookworm)
+
 - name: Add PostgreSQL repository for Debian 12
   ansible.builtin.apt_repository:
     repo: "deb [signed-by=/usr/share/keyrings/postgresql.asc] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main"
     filename: pgdg
     state: present
   
-# 3. Update apt cache
+
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: yes
   
-# 4. Install PostgreSQL client and Python libs
+
 - name: Install PostgreSQL client and Python libs
   ansible.builtin.apt:
     name:
@@ -35,7 +35,7 @@
       - python3-pip
     state: present
   
-# 5. Install PostgreSQL server
+
 - name: Install PostgreSQL {{ postgresql_version }}
   ansible.builtin.apt:
     name: "postgresql-{{ postgresql_version }}"

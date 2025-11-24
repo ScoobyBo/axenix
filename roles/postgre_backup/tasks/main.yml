@@ -33,7 +33,7 @@
     group: postgres
     mode: "0750"
 
-# --- CRON JOBS ---
+# cron jobs
 
 - name: Setup daily full backup cron
   cron:
@@ -50,7 +50,7 @@
     job: "{{ backup_dir }}/{{ inc_backup_script }}"
     minute: "0"
 
-- name: Setup cleanup cron (runs daily)
+- name: Setup cleanup cron 
   cron:
     name: "cleanup old postgres backups"
     user: postgres

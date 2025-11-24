@@ -12,13 +12,13 @@
     msg: "Backup file '{{ backup_file }}' not found"
   when: not backup_stat.stat.exists
 
-# OPTIONAL: Полная пересборка кластера по желанию
+
 
 - name: Stop PostgreSQL
   service:
     name: postgresql
     state: stopped
-  become: yes  # Требуются права root для управления службами
+  become: yes  
 
 - name: Remove old data directory
   file:
@@ -43,7 +43,7 @@
     mode: "0700"
   become_user: postgres
 
-  # ---- START DB BEFORE RESTORE ----
+  # start db before restore
 
 - name: Start PostgreSQL before restore
   service:
@@ -58,7 +58,7 @@
     name: "{{ restore_db }}"
     state: present
 
-# ---- RESTORE ----
+# restore
 
 - name: Restore from gzip backup
   become_user: postgres
@@ -79,11 +79,11 @@
     pg_restore -d {{ restore_db }} {{ backup_file }}
   when: backup_file.endswith('.dump')
 
-# ---- START DB ----
+
 
 - name: Start PostgreSQL
   service:
     name: postgresql
     state: started
     enabled: yes
-  become: yes  # Требуются права root для управления службами
+  become: yes  
