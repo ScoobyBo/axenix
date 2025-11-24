@@ -103,7 +103,7 @@ pipeline {
                 script {
                     ansiblePlaybook(
                         playbook: "playbooks/${ROLE}.yml",
-                        inventory: "inventory.yml",
+                        inventory: "inventary.yml",
                         extraVars: PARAMS,
                         colorized: true
                     )
