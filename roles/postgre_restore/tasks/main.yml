@@ -43,6 +43,16 @@
     mode: "0700"
   become_user: postgres
 
+  # ---- START DB BEFORE RESTORE ----
+
+- name: Start PostgreSQL before restore
+  service:
+    name: postgresql
+    state: started
+  become: yes
+  when: force_reinit | bool
+
+
 # ---- RESTORE ----
 
 - name: Restore from gzip backup
