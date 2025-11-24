@@ -48,7 +48,7 @@
     owner: postgres
     group: postgres
     mode: "0600"
-  become_user: postgres
+  
 
 - name: Reload PostgreSQL
   service:
@@ -72,7 +72,7 @@
       max_replication_slots = 10
       hot_standby = on
       listen_addresses = '*'
-  become_user: postgres
+  
 
 - name: Restart PostgreSQL after config update
   service:
