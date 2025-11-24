@@ -1,105 +1,141 @@
-def params_map = [:]
-def ROLE = ""
-
 pipeline {
     agent any
 
+    parameters {
+
+        choice(
+            name: 'ROLE',
+            choices: [
+                'postgre_install',
+                'postgre_remote',
+                'postgre_backup',
+                'postgre_db',
+                'postgre_restore',
+                'postgre_users'
+            ],
+            description: 'Выбери Ansible роль'
+        )
+
+        // -------- параметры для postgre_install --------
+        string(name: 'install_postgresql_version', defaultValue: '15', description: '')
+        string(name: 'install_replication_user', defaultValue: 'replicator', description: '')
+        password(name: 'install_replication_password', defaultValue: '', description: '')
+        string(name: 'install_replication_network', defaultValue: '10.0.0.0/24', description: '')
+
+        // -------- параметры для postgre_remote --------
+        string(name: 'remote_postgresql_version', defaultValue: '15', description: '')
+        string(name: 'remote_data_directory', defaultValue: '/etc/postgresql/15/main', description: '')
+        string(name: 'remote_primary_host', defaultValue: '10.10.10.10', description: '')
+        string(name: 'remote_primary_port', defaultValue: '5432', description: '')
+        string(name: 'remote_replication_user', defaultValue: 'replicator', description: '')
+        password(name: 'remote_replication_password', defaultValue: '', description: '')
+        text(name: 'remote_pg_hba_rules', defaultValue: "host all all 0.0.0.0/0 md5\nhost replication replicator 10.0.0.0/24 md5", description: '')
+
+        // -------- параметры для postgre_backup --------
+        string(name: 'backup_dir', defaultValue: '/opt/postgres_backups', description: '')
+        string(name: 'max_backups', defaultValue: '30', description: '')
+        string(name: 'full_backup_script', defaultValue: 'full_backup.sh', description: '')
+        string(name: 'inc_backup_script', defaultValue: 'inc_backup.sh', description: '')
+
+        // -------- параметры для postgre_db --------
+        string(name: 'db_name', defaultValue: 'mydb', description: '')
+        string(name: 'db_owner', defaultValue: 'myuser', description: '')
+        string(name: 'db_port', defaultValue: '5432', description: '')
+
+        // -------- параметры для postgre_restore --------
+        string(name: 'restore_backup_file', defaultValue: '/tmp/full_backup.sql.gz', description: '')
+        string(name: 'restore_data_directory', defaultValue: '/var/lib/postgresql/15/main', description: '')
+        string(name: 'restore_postgresql_version', defaultValue: '15', description: '')
+        string(name: 'restore_db', defaultValue: 'gitea', description: '')
+        booleanParam(name: 'restore_force_reinit', defaultValue: false, description: '')
+
+        // -------- параметры для postgre_users --------
+        text(
+            name: 'users_list',
+            defaultValue: '''
+[
+  {
+    "name": "appuser",
+    "password": "secret123"
+  }
+]
+''',
+            description: 'JSON список пользователей'
+        )
+    }
+
     stages {
 
-        stage('Выбор роли') {
-            steps {
-                script {
-                    ROLE = input(
-                        message: 'Какую роль выполнить?',
-                        parameters: [
-                            choice(
-                                name: 'ROLE_NAME',
-                                choices: [
-                                    'postgre_install',
-                                    'postgre_db',
-                                    'postgre_users',
-                                    'postgre_backup',
-                                    'postgre_remote',
-                                    'postgre_restore'
-                                ].join('\n')
-                            )
-                        ]
-                    )
-                }
-            }
-        }
-
-        stage('Сбор переменных роли') {
+        stage('Run Ansible') {
             steps {
                 script {
 
-                    switch (ROLE) {
+                    def extraVars = [:]
 
-                        case "postgre_install":
-                            params_map = input(
-                                message: "Параметры установки PostgreSQL:",
-                                parameters: [
-                                    string(name: 'postgresql_version', defaultValue: '15')
-                                ]
-                            )
+                    switch (params.ROLE) {
+
+                        case 'postgre_install':
+                            extraVars = [
+                                postgresql_version   : params.install_postgresql_version,
+                                replication_user     : params.install_replication_user,
+                                replication_password : params.install_replication_password,
+                                replication_network  : params.install_replication_network
+                            ]
                             break
 
-                        case "postgre_db":
-                            params_map = input(
-                                message: "Настройка DB:",
-                                parameters: [
-                                    string(name: 'db_name', defaultValue: 'mydb'),
-                                    string(name: 'db_owner', defaultValue: 'myuser')
-                                ]
-                            )
+                        case 'postgre_remote':
+                            extraVars = [
+                                postgresql_version   : params.remote_postgresql_version,
+                                data_directory       : params.remote_data_directory,
+                                primary_host         : params.remote_primary_host,
+                                primary_port         : params.remote_primary_port,
+                                replication_user     : params.remote_replication_user,
+                                replication_password : params.remote_replication_password,
+                                pg_hba_rules         : params.remote_pg_hba_rules.split("\n")
+                            ]
                             break
 
-                        case "postgre_users":
-                            params_map = input(
-                                message: "Пользователи:",
-                                parameters: [
-                                    text(name: 'postgresql_users',
-                                         defaultValue: '''[
-  {"name": "appuser", "password": "secret"},
-  {"name": "report", "password": "rep_pass"}
-]'''
-                                    )
-                                ]
-                            )
+                        case 'postgre_backup':
+                            extraVars = [
+                                backup_dir        : params.backup_dir,
+                                max_backups       : params.max_backups,
+                                full_backup_script: params.full_backup_script,
+                                inc_backup_script : params.inc_backup_script
+                            ]
                             break
 
-                        case "postgre_backup":
-                            params_map = input(
-                                message: "Параметры backup:",
-                                parameters: [
-                                    string(name: 'backup_dir', defaultValue: '/opt/postgres_backups'),
-                                    string(name: 'max_backups', defaultValue: '30')
-                                ]
-                            )
+                        case 'postgre_db':
+                            extraVars = [
+                                db_name           : params.db_name,
+                                db_owner          : params.db_owner,
+                                postgresql_port   : params.db_port
+                            ]
                             break
 
-                        case "postgre_restore":
-                            params_map = input(
-                                message: "Параметры восстановления:",
-                                parameters: [
-                                    file(name: 'backup_file'),
-                                    string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main')
-                                ]
-                            )
+                        case 'postgre_restore':
+                            extraVars = [
+                                backup_file       : params.restore_backup_file,
+                                data_directory    : params.restore_data_directory,
+                                postgresql_version: params.restore_postgresql_version,
+                                restore_db        : params.restore_db,
+                                force_reinit      : params.restore_force_reinit
+                            ]
+                            break
+
+                        case 'postgre_users':
+                            extraVars = [
+                                postgresql_users: readJSON(text: params.users_list)
+                            ]
                             break
                     }
-                }
-            }
-        }
 
-        stage('Выполнение роли') {
-            steps {
-                ansiblePlaybook(
-                    playbook: "site.yml",
-                    inventory: "inventory",
-                    extraVars: params_map,
-                    tags: ROLE
-                )
+                    sh """
+                        ansible-playbook playbook.yml \
+                           --limit dbservers \
+                           --extra-vars '${groovy.json.JsonOutput.toJson(extraVars)}' \
+                           --extra-vars 'role_to_run=${params.ROLE}'
+                    """
+                }
             }
         }
     }
