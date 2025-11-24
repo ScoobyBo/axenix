@@ -6,30 +6,26 @@
     path: /usr/share/keyrings
     state: directory
     mode: '0755'
-  become_user: ansible
-  become: true
+  
 # 1. GPG key (ASCII — корректный!)
 - name: Download PostgreSQL GPG key
   ansible.builtin.get_url:
     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
     dest: /usr/share/keyrings/postgresql.asc
     mode: '0644'
-  become_user: ansible
-  become: true
+  
 # 2. Add PGDG repo for Debian 12 (bookworm)
 - name: Add PostgreSQL repository for Debian 12
   ansible.builtin.apt_repository:
     repo: "deb [signed-by=/usr/share/keyrings/postgresql.asc] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main"
     filename: pgdg
     state: present
-  become_user: ansible
-  become: true
+  
 # 3. Update apt cache
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: yes
-  become_user: ansible
-  become: true
+  
 # 4. Install PostgreSQL client and Python libs
 - name: Install PostgreSQL client and Python libs
   ansible.builtin.apt:
@@ -38,15 +34,13 @@
       - python3-psycopg2
       - python3-pip
     state: present
-  become_user: ansible
-  become: true
+  
 # 5. Install PostgreSQL server
 - name: Install PostgreSQL {{ postgresql_version }}
   ansible.builtin.apt:
     name: "postgresql-{{ postgresql_version }}"
     state: present
-  become_user: ansible
-  become: true
+  
 - name: Create replication user
   become_user: postgres
   community.postgresql.postgresql_user:
