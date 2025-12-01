@@ -76,6 +76,7 @@
     login_user: "{{ postgres_admin_user }}"
     login_password: "{{ postgres_admin_password }}"
     login_host: localhost
+    login_db: postgres
 
 # ======== Конфиги ========
 
