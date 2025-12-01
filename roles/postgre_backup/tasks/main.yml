@@ -1,59 +1,32 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# tasks file for postgre_backup
-- name: Ensure backup directory exists
-  file:
+- name: Create backup user
+  ansible.builtin.user:
+    name: "{{ backup_user }}"
+    home: "{{ backup_user_home }}"
+    shell: /bin/bash
+    create_home: yes
+    
+- name: Create backup directory
+  ansible.builtin.file:
     path: "{{ backup_dir }}"
     state: directory
-    owner: postgres
-    group: postgres
-    mode: "0750"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0750'
 
-- name: Deploy full backup script
-  template:
-    src: "full_backup.sh.j2"
-    dest: "{{ backup_dir }}/{{ full_backup_script }}"
-    owner: postgres
-    group: postgres
-    mode: "0750"
+- name: Deploy backup script
+  ansible.builtin.template:
+    src: "backup.sh.j2"
+    dest: "{{ backup_user_home }}/backup.sh"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0750'
 
-- name: Deploy incremental backup script
-  template:
-    src: "inc_backup.sh.j2"
-    dest: "{{ backup_dir }}/{{ inc_backup_script }}"
-    owner: postgres
-    group: postgres
-    mode: "0750"
-
-- name: Deploy cleanup script
-  template:
-    src: "cleanup_backups.sh.j2"
-    dest: "{{ backup_dir }}/cleanup_backups.sh"
-    owner: postgres
-    group: postgres
-    mode: "0750"
-
-# cron jobs
-
-- name: Setup daily full backup cron
-  cron:
-    name: "postgres full backup"
-    user: postgres
-    job: "{{ backup_dir }}/{{ full_backup_script }}"
-    hour: "01"
-    minute: "00"
-
-- name: Setup hourly incremental backup cron
-  cron:
-    name: "postgres incremental backup"
-    user: postgres
-    job: "{{ backup_dir }}/{{ inc_backup_script }}"
-    minute: "0"
-
-- name: Setup cleanup cron 
-  cron:
-    name: "cleanup old postgres backups"
-    user: postgres
-    job: "{{ backup_dir }}/cleanup_backups.sh"
-    hour: "02"
-    minute: "00"
+- name: Configure cron job
+  ansible.builtin.cron:
+    name: "PostgreSQL full backup"
+    user: "{{ backup_user }}"
+    minute: "{{ backup_cron_minute }}"
+    hour: "{{ backup_cron_hour }}"
+    job: "{{ backup_user_home }}/backup.sh"
+  when: backup_cron_enabled
