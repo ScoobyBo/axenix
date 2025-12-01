@@ -1,9 +1,0 @@
-#!/bin/bash
-set -e
-
-BACKUP_DIR="{{ backup_dir }}"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-FILENAME="inc_${TIMESTAMP}.sql.gz"
-
-# Инкрементал через dump (условно)
-pg_dump -Fc postgres | gzip > "${BACKUP_DIR}/${FILENAME}"

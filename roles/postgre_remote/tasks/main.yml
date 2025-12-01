@@ -1,10 +1,52 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for postgre_remote
-- name: Run join mode tasks
-  include_tasks: join.yml
+---
+- name: Stop PostgreSQL before replication sync
+  service:
+    name: postgresql
+    state: stopped
 
-- name: Configure pg_hba
-  include_tasks: pg_hba.yml
+- name: Remove old data directory before replication
+  file:
+    path: "{{ data_directory }}"
+    state: absent
 
+- name: Create empty data directory
+  file:
+    path: "{{ data_directory }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0700"
 
+- name: Perform base backup from primary
+  command: >
+    pg_basebackup
+    -h {{ primary_host }}
+    -p {{ primary_port }}
+    -U {{ replication_user }}
+    -D {{ data_directory }}
+    -R
+  
+  environment:
+    PGPASSWORD: "{{ replication_password }}"
+
+- name: Start PostgreSQL in replica mode
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Deploy pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ data_directory }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0600"
+
+- name: Reload PostgreSQL after pg_hba update
+  service:
+    name: postgresql
+    state: reloaded
