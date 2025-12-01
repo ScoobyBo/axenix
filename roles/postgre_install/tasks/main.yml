@@ -1,46 +1,83 @@
-#SPDX-License-Identifier: MIT-0
 ---
+# ======== Удаление старой версии ========
+
+- name: Remove old PostgreSQL packages
+  apt:
+    name: "postgresql*"
+    state: absent
+    purge: yes
+
+- name: Remove PostgreSQL directories
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /var/lib/postgresql
+    - /etc/postgresql
+    - /etc/postgresql-common
+    - /usr/share/postgresql
+
+# ======== Репозиторий ========
 
 - name: Ensure keyrings directory exists
-  ansible.builtin.file:
+  file:
     path: /usr/share/keyrings
     state: directory
     mode: '0755'
-  
 
 - name: Download PostgreSQL GPG key
-  ansible.builtin.get_url:
+  get_url:
     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
     dest: /usr/share/keyrings/postgresql.asc
     mode: '0644'
-  
 
 - name: Add PostgreSQL repository for Debian 12
-  ansible.builtin.apt_repository:
+  apt_repository:
     repo: "deb [signed-by=/usr/share/keyrings/postgresql.asc] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main"
     filename: pgdg
     state: present
-  
 
 - name: Update apt cache
-  ansible.builtin.apt:
+  apt:
     update_cache: yes
-  
+
+# ======== Установка ========
 
 - name: Install PostgreSQL client and Python libs
-  ansible.builtin.apt:
+  apt:
     name:
       - postgresql-client
       - python3-psycopg2
       - python3-pip
     state: present
-  
 
 - name: Install PostgreSQL {{ postgresql_version }}
-  ansible.builtin.apt:
+  apt:
     name: "postgresql-{{ postgresql_version }}"
     state: present
-  
+
+# ======== Создание администратора БД ========
+
+- name: Create admin database user
+  community.postgresql.postgresql_user:
+    name: "{{ postgres_admin_user }}"
+    password: "{{ postgres_admin_password }}"
+    role_attr_flags: "SUPERUSER"
+  become_user: postgres
+
+# ======== Настройка репликации ========
+
+- name: Create replication user
+  community.postgresql.postgresql_user:
+    name: "{{ replication_user }}"
+    password: "{{ replication_password }}"
+    role_attr_flags: "REPLICATION"
+    login_user: "{{ postgres_admin_user }}"
+    login_password: "{{ postgres_admin_password }}"
+    login_host: localhost
+
+# ======== Конфиги ========
+
 - name: Deploy pg_hba.conf
   template:
     src: pg_hba_primary.j2
@@ -48,26 +85,9 @@
     owner: postgres
     group: postgres
     mode: "0600"
-  
 
-- name: Reload PostgreSQL
-  service:
-    name: postgresql
-    state: reloaded
-  
-- name: Wait for PostgreSQL to apply new pg_hba.conf
-  pause:
-    seconds: 5
-
-- name: Create replication user
-  community.postgresql.postgresql_user:
-    name: "{{ replication_user }}"
-    password: "{{ replication_password }}"
-    role_attr_flags: "REPLICATION"
-    login_user: postgres
-    login_host: localhost
 - name: Configure postgresql.conf for replication
-  ansible.builtin.blockinfile:
+  blockinfile:
     path: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
     block: |
       wal_level = replica
@@ -75,11 +95,8 @@
       max_replication_slots = 10
       hot_standby = on
       listen_addresses = '*'
-  
 
-- name: Restart PostgreSQL after config update
+- name: Restart PostgreSQL
   service:
     name: postgresql
     state: restarted
-  
-
