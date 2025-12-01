@@ -2,46 +2,61 @@ pipeline {
     agent { label 'ax 2' }
 
     parameters {
-        choice(
-            name: 'ROLE',
-            choices: [
-                'postgre_backup'
-            ],
-            description: 'Select Ansible role'
+
+        string(
+            name: 'backup_dir',
+            defaultValue: '/opt/postgres_backups',
+            description: 'Каталог для хранения бэкапов'
+        )
+
+        string(
+            name: 'max_backups',
+            defaultValue: '30',
+            description: 'Максимальное количество хранимых бэкапов'
+        )
+
+        string(
+            name: 'cron_hour',
+            defaultValue: '3',
+            description: 'Час запуска cron-задачи'
+        )
+
+        string(
+            name: 'cron_minute',
+            defaultValue: '0',
+            description: 'Минута запуска cron-задачи'
+        )
+
+        string(
+            name: 'pg_superuser',
+            defaultValue: 'postgres',
+            description: 'Суперпользователь PostgreSQL'
+        )
+
+        string(
+            name: 'pg_dumpall_path',
+            defaultValue: '/usr/bin/pg_dumpall',
+            description: 'Путь к исполняемому файлу pg_dumpall'
         )
     }
 
     stages {
-        stage('Input Role Variables') {
-            steps {
-                script {
-                    switch(ROLE) {
-
-                        case 'postgre_backup':
-                            PARAMS = input(
-                                message: 'Parameters for postgre_backup',
-                                parameters: [
-                                    string(name: 'backup_dir', defaultValue: '/opt/postgres_backups'),
-                                    string(name: 'max_backups', defaultValue: '30'),
-                                    string(name: 'cron_hour', defaultValue: '3'),
-                                    string(name: 'cron_minute', defaultValue: '0'),
-                                    string(name: 'pg_superuser', defaultValue: 'postgres'),
-                                    string(name: 'pg_dumpall_path', defaultValue: '/usr/bin/pg_dumpall')
-                                ]
-                            )
-                            break
-                    }
-                }
-            }
-        }
 
         stage('Run Ansible Role') {
             steps {
                 script {
+
                     ansiblePlaybook(
                         playbook: "postgre_backup.yml",
                         inventory: "inventary.yml",
-                        extraVars: PARAMS,
+                        extraVars: [
+                            backup_dir: params.backup_dir,
+                            max_backups: params.max_backups,
+                            cron_hour: params.cron_hour,
+                            cron_minute: params.cron_minute,
+                            pg_superuser: params.pg_superuser,
+                            pg_dumpall_path: params.pg_dumpall_path
+                        ],
                         colorized: true
                     )
                 }
