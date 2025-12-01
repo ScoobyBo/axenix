@@ -1,8 +1,7 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for postgre_users
-postgresql_users: []
-# Пример структуры:
-# postgresql_users:
-#   - name: appuser
-#     password: "secret123"
+postgresql_user_name: ""
+postgresql_user_password: ""
+postgres_admin_user: "Ivan_administrator"
+postgres_admin_password: "12345678"
