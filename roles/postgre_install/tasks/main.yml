@@ -46,6 +46,7 @@
 - name: Install PostgreSQL client and Python libs
   apt:
     name:
+      - acl
       - postgresql-client
       - python3-psycopg2
       - python3-pip
