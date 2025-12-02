@@ -7,3 +7,5 @@ postgresql_version: "15"
 restore_db: "gitea"
 backup_user: "pgbackup"
 force_reinit: false
+postgres_admin_user: "Ivan_administrator"
+postgres_admin_password: "12345678"

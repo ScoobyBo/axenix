@@ -60,11 +60,13 @@
   become: yes 
   
 - name: Ensure target database exists
-  become_user: postgres
   community.postgresql.postgresql_db:
     name: "{{ restore_db }}"
     state: present
-
+    login_user: "{{ postgres_admin_user }}"
+    login_password: "{{ postgres_admin_password }}"
+    login_host: localhost
+    login_db: postgres
 # restore
 
 - name: Restore from gzip backup
