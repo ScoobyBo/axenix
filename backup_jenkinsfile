@@ -4,77 +4,94 @@ pipeline {
     parameters {
 
         string(
-            name: 'backup_dir',
-            defaultValue: '/opt/postgres_backups',
-            description: 'Каталог для хранения бэкапов'
+            name: 'backup_dir', defaultValue: '/opt/postgres_backups', description: 'Каталог для хранения бэкапов'
         )
 
         string(
-            name: 'max_backups',
-            defaultValue: '30',
-            description: 'Максимальное количество хранимых бэкапов'
+            name: 'max_backups', defaultValue: '30', description: 'Максимальное количество хранимых бэкапов'
         )
 
         string(
-            name: 'cron_hour',
-            defaultValue: '3',
-            description: 'Час запуска cron-задачи'
+            name: 'cron_hour', defaultValue: '3', description: 'Час запуска cron-задачи'
         )
 
         string(
-            name: 'cron_minute',
-            defaultValue: '0',
-            description: 'Минута запуска cron-задачи'
+            name: 'cron_minute', defaultValue: '0', description: 'Минута запуска cron-задачи'
         )
 
         string(
-            name: 'pg_superuser',
-            defaultValue: 'postgres',
-            description: 'Суперпользователь PostgreSQL'
+            name: 'pg_superuser', defaultValue: 'postgres', description: 'Суперпользователь PostgreSQL'
         )
 
         string(
-            name: 'pg_dumpall_path',
-            defaultValue: '/usr/bin/pg_dumpall',
-            description: 'Путь к исполняемому файлу pg_dumpall'
-
-            
+            name: 'pg_dumpall_path', defaultValue: '/usr/bin/pg_dumpall', description: 'Путь к исполняемому файлу pg_dumpall'
         )
 
         string(
-            name: 'backup_user',
-            defaultValue: 'pgbackup',
-            description: 'Пользователь для выполнения бэкапов PostgreSQL' 
+            name: 'backup_user', defaultValue: 'pgbackup', description: 'Пользователь для выполнения бэкапов PostgreSQL'
         )
 
         string(
-            name: 'backup_user_home',
-            defaultValue: '/opt/pgbackup',
-            description: 'Домашний каталог пользователя для выполнения бэкапов PostgreSQL' 
+            name: 'backup_user_home', defaultValue: '/opt/pgbackup', description: 'Домашний каталог пользователя для выполнения бэкапов PostgreSQL'
+        )
+
+        
+        password(
+            name: 'vault_password',
+            description: 'Пароль для расшифровки приватного ключа'
         )
     }
 
     stages {
+
+        stage('Decrypt SSH key') {
+            steps {
+                sh '''
+                    echo "$vault_password" > vault_pass.txt
+                    ansible-vault decrypt private_key_vaulted \
+                        --output private_key \
+                        --vault-password-file vault_pass.txt
+
+                    chmod 600 private_key
+                '''
+            }
+        }
 
         stage('Run Ansible Role') {
             steps {
                 script {
 
                     ansiblePlaybook(
-                        playbook: "postgre_backup.yml",
+                        playbook: "playbook.yml",
                         inventory: "/home/inventary.yml",
+
                         extraVars: [
                             backup_dir: params.backup_dir,
                             max_backups: params.max_backups,
                             cron_hour: params.cron_hour,
                             cron_minute: params.cron_minute,
                             pg_superuser: params.pg_superuser,
-                            pg_dumpall_path: params.pg_dumpall_path
+                            pg_dumpall_path: params.pg_dumpall_path,
+                            backup_user: params.backup_user,
+                            backup_user_home: params.backup_user_home,
+                            ANSIBLE_ROLE: "postgre_backup"
                         ],
+
+                        
+                        privateKey: "private_key",
+
                         colorized: true
                     )
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                rm -f vault_pass.txt private_key
+            '''
         }
     }
 }

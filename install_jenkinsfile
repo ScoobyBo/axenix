@@ -5,26 +5,59 @@ pipeline {
         string(name: 'postgresql_version', defaultValue: '15')
         string(name: 'replication_user', defaultValue: 'replicator')
         password(name: 'replication_password')
-        string(name: 'replication_network', defaultValue: '10.0.0.0/24')
+        string(name: 'replication_network', defaultValue: '10.0.0.0/28')
+        string(name: 'postgres_admin_user', defaultValue: 'Ivan_administrator')
+        password(name: 'postgres_admin_password')
+
+        
+        password(name: 'vault_password', description: 'Пароль для расшифровки приватного ключа')
     }
 
     stages {
+        stage('Decrypt SSH key') {
+            steps {
+                sh '''
+                    echo "$vault_password" > vault_pass.txt
+                    ansible-vault decrypt private_key_vaulted \
+                        --output private_key \
+                        --vault-password-file vault_pass.txt
+
+                    chmod 600 private_key
+                '''
+            }
+        }
+
         stage('Run Ansible Role postgre_install') {
             steps {
                 script {
                     ansiblePlaybook(
-                        playbook: "postgre_install.yml",
+                        playbook: "playbook.yml",
                         inventory: "/home/inventary.yml",
                         extraVars: [
-                            postgresql_version: params.postgresql_version,
-                            replication_user: params.replication_user,
-                            replication_password: params.replication_password,
-                            replication_network: params.replication_network
+                            postgresql_version   : params.postgresql_version,
+                            replication_user     : params.replication_user,
+                            replication_password : params.replication_password,
+                            replication_network  : params.replication_network,
+                            postgres_admin_user  : params.postgres_admin_user,
+                            postgres_admin_password: params.postgres_admin_password,
+                            ANSIBLE_ROLE: "postgre_install"
                         ],
+
+                        
+                        privateKey: "private_key",
+
                         colorized: true
                     )
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                rm -f vault_pass.txt private_key
+            '''
         }
     }
 }

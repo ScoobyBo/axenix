@@ -1,5 +1,5 @@
 ---
-- name: деплой постгри
+- name: Configure PostgreSQL server
   hosts: all
   become: yes
   

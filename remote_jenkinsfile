@@ -7,29 +7,67 @@ pipeline {
         string(name: 'primary_host', defaultValue: '10.10.10.10')
         string(name: 'replication_user', defaultValue: 'replicator')
         password(name: 'replication_password')
-        text(name: 'pg_hba_rules', defaultValue: """host all all 0.0.0.0/0 md5
-host replication replicator 10.0.0.0/24 md5""")
+
+        text(
+            name: 'pg_hba_rules',
+            defaultValue: """host all all 0.0.0.0/0 md5
+host replication replicator 10.0.0.0/24 md5"""
+        )
+
+        
+        password(
+            name: 'vault_password',
+            description: 'Пароль для расшифровки приватного ключа'
+        )
     }
 
     stages {
+
+        stage('Decrypt SSH key') {
+            steps {
+                sh '''
+                    echo "$vault_password" > vault_pass.txt
+                    ansible-vault decrypt private_key_vaulted \
+                        --output private_key \
+                        --vault-password-file vault_pass.txt
+
+                    chmod 600 private_key
+                '''
+            }
+        }
+
         stage('Run Ansible Role postgre_remote') {
             steps {
                 script {
                     ansiblePlaybook(
-                        playbook: "postgre_remote.yml",
+                        playbook: "playbook.yml",
                         inventory: "/home/inventary.yml",
+
                         extraVars: [
-                            postgresql_version: params.postgresql_version,
-                            data_directory: params.data_directory,
-                            primary_host: params.primary_host,
-                            replication_user: params.replication_user,
+                            postgresql_version  : params.postgresql_version,
+                            data_directory      : params.data_directory,
+                            primary_host        : params.primary_host,
+                            replication_user    : params.replication_user,
                             replication_password: params.replication_password,
-                            pg_hba_rules: params.pg_hba_rules
+                            pg_hba_rules        : params.pg_hba_rules,
+                            ANSIBLE_ROLE: "postgre_remote"
                         ],
+
+                       
+                        privateKey: "private_key",
+
                         colorized: true
                     )
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                rm -f vault_pass.txt private_key
+            '''
         }
     }
 }

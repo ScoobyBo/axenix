@@ -4,24 +4,62 @@ pipeline {
     parameters {
         string(name: 'postgresql_user_name', defaultValue: 'appuser')
         password(name: 'postgresql_user_password', defaultValue: 'secret123')
+        string(name: 'postgres_admin_user', defaultValue: 'Ivan_administrator')
+        password(name: 'postgres_admin_password')
+
+        
+        password(
+            name: 'vault_password',
+            description: 'Пароль для расшифровки приватного SSH-ключа'
+        )
     }
 
     stages {
+
+        stage('Decrypt SSH key') {
+            steps {
+                sh '''
+                    echo "$vault_password" > vault_pass.txt
+
+                    ansible-vault decrypt private_key_vaulted \
+                        --output private_key \
+                        --vault-password-file vault_pass.txt
+
+                    chmod 600 private_key
+                '''
+            }
+        }
+
         stage('Run Ansible Role postgre_users') {
             steps {
                 script {
                     ansiblePlaybook(
-                        playbook: "postgre_users.yml",
+                        playbook: "playbook.yml",
                         inventory: "/home/inventary.yml",
+
                         extraVars: [
-                            postgresql_user_name: params.postgresql_user_name,
-                            postgresql_user_password: params.postgresql_user_password
+                            postgresql_user_name      : params.postgresql_user_name,
+                            postgresql_user_password  : params.postgresql_user_password,
+                            postgres_admin_user       : params.postgres_admin_user,
+                            postgres_admin_password   : params.postgres_admin_password,
+                            ANSIBLE_ROLE: "postgre_users"
                         ],
+
+                        
+                        privateKey: "private_key",
+
                         colorized: true
                     )
                 }
             }
         }
     }
-}
 
+    post {
+        always {
+            sh '''
+                rm -f vault_pass.txt private_key
+            '''
+        }
+    }
+}

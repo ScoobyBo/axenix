@@ -2,31 +2,68 @@ pipeline {
     agent { label 'ax 2' }
 
     parameters {
-        string(name: 'backup_file', defaultValue: '/tmp/full_backup.sql.gz')
-        string(name: 'data_directory', defaultValue: '/var/lib/postgresql/15/main')
+        string(name: 'backup_file', defaultValue: '/home/gitea_db_20251012_023001.sql.gz')
         string(name: 'postgresql_version', defaultValue: '15')
         string(name: 'restore_db', defaultValue: 'gitea')
         booleanParam(name: 'force_reinit', defaultValue: false)
+        string(name: 'postgres_admin_user', defaultValue: 'Ivan_administrator')
+        password(name: 'postgres_admin_password')
+
+        
+        password(
+            name: 'vault_password',
+            description: 'Пароль для расшифровки приватного SSH-ключа'
+        )
     }
 
     stages {
+
+        stage('Decrypt SSH key') {
+            steps {
+                sh '''
+                    echo "$vault_password" > vault_pass.txt
+
+                    ansible-vault decrypt private_key_vaulted \
+                        --output private_key \
+                        --vault-password-file vault_pass.txt
+
+                    chmod 600 private_key
+                '''
+            }
+        }
+
         stage('Run Ansible Role postgre_restore') {
             steps {
                 script {
                     ansiblePlaybook(
-                        playbook: "postgre_restore.yml",
+                        playbook: "playbook.yml",
                         inventory: "/home/inventary.yml",
+
                         extraVars: [
-                            backup_file: params.backup_file,
-                            data_directory: params.data_directory,
-                            postgresql_version: params.postgresql_version,
-                            restore_db: params.restore_db,
-                            force_reinit: params.force_reinit
+                            backup_file          : params.backup_file,
+                            postgresql_version   : params.postgresql_version,
+                            restore_db           : params.restore_db,
+                            force_reinit         : params.force_reinit,
+                            postgres_admin_user  : params.postgres_admin_user,
+                            postgres_admin_password: params.postgres_admin_password,
+                            ANSIBLE_ROLE: "postgre_restore"
                         ],
+
+                        
+                        privateKey: "private_key",
+
                         colorized: true
                     )
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                rm -f vault_pass.txt private_key
+            '''
         }
     }
 }

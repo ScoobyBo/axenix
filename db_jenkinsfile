@@ -4,24 +4,57 @@ pipeline {
     parameters {
         string(name: 'db_name', defaultValue: 'mydb')
         string(name: 'db_owner', defaultValue: 'myuser')
+        string(name: 'postgres_admin_user', defaultValue: 'Ivan_administrator')
+        password(name: 'postgres_admin_password')
+
         
+        password(name: 'vault_password', description: 'Пароль для расшифровки приватного ключа')
     }
 
     stages {
+
+        stage('Decrypt SSH key') {
+            steps {
+                sh '''
+                    echo "$vault_password" > vault_pass.txt
+                    ansible-vault decrypt private_key_vaulted \
+                        --output private_key \
+                        --vault-password-file vault_pass.txt
+
+                    chmod 600 private_key
+                '''
+            }
+        }
+
         stage('Run Ansible Role postgre_db') {
             steps {
                 script {
                     ansiblePlaybook(
-                        playbook: "postgre_db.yml",
+                        playbook: "playbook.yml",
                         inventory: "/home/inventary.yml",
                         extraVars: [
                             db_name: params.db_name,
-                            db_owner: params.db_owner
+                            db_owner: params.db_owner,
+                            postgres_admin_user: params.postgres_admin_user,
+                            postgres_admin_password: params.postgres_admin_password,
+                            ANSIBLE_ROLE: "postgre_db"
                         ],
+
+                        
+                        privateKey: "private_key",
+
                         colorized: true
                     )
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                rm -f vault_pass.txt private_key
+            '''
         }
     }
 }
