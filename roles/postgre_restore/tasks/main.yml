@@ -78,10 +78,15 @@
     login_host: localhost
 # restore
 
-- name: Restore from gzip backup
-  become_user: postgres
-  command: >
-    bash -c "gunzip -c {{ backup_file }} | psql -d {{ restore_db }}"
+- name: Restore from backup using postgresql_db module
+  community.postgresql.postgresql_db:
+    name: "{{ restore_db }}"
+    state: restore
+    target: "{{ backup_file }}"
+    login_user: "{{ postgres_admin_user }}"
+    login_password: "{{ postgres_admin_password }}"
+    login_host: localhost
+  # Модуль сам обработает .gz файл
 
 - name: Start PostgreSQL
   service:
