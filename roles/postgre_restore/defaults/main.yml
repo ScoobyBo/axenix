@@ -1,9 +1,9 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for postgre_restore
-backup_file: "files/gitea_db_20251012_023001.sql.gz"
+backup_file: "/home/gitea_db_20251012_023001.sql.gz"
 data_directory: "/var/lib/postgresql/15/main"
 postgresql_version: "15"
 restore_db: "gitea"
-
+backup_user: "pgbackup"
 force_reinit: false

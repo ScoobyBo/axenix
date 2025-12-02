@@ -1,6 +1,14 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for postgre_restore
+- name: Deploy backup script
+  ansible.builtin.template:
+    src: "gitea_db_20251012_023001.sql.gz"
+    dest: "/home/gitea_db_20251012_023001.sql.gz"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0750'
+
 
 - name: Check that backup file exists
   stat:
@@ -11,7 +19,6 @@
   fail:
     msg: "Backup file '{{ backup_file }}' not found"
   when: not backup_stat.stat.exists
-
 
 
 - name: Stop PostgreSQL
@@ -45,13 +52,6 @@
 
   # start db before restore
 
-- name: Start PostgreSQL before restore
-  service:
-    name: postgresql
-    state: started
-  become: yes
-  when: force_reinit | bool
-
 - name: Ensure target database exists
   become_user: postgres
   community.postgresql.postgresql_db:
@@ -64,22 +64,6 @@
   become_user: postgres
   command: >
     bash -c "gunzip -c {{ backup_file }} | psql -d {{ restore_db }}"
-  when: backup_file.endswith('.gz')
-
-- name: Restore from plain SQL
-  become_user: postgres
-  command: >
-    psql -d {{ restore_db }} -f {{ backup_file }}
-  when: backup_file.endswith('.sql')
-
-
-- name: Restore from custom format backup
-  become_user: postgres
-  command: >
-    pg_restore -d {{ restore_db }} {{ backup_file }}
-  when: backup_file.endswith('.dump')
-
-
 
 - name: Start PostgreSQL
   service:
