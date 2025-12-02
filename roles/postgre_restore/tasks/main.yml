@@ -66,6 +66,7 @@
     name: "{{ postgres_admin_user }}"
     password: "{{ postgres_admin_password }}"
     role_attr_flags: "SUPERUSER"
+    login_host: localhost
   become_user: postgres
 
 - name: Ensure target database exists
