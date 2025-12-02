@@ -17,7 +17,7 @@ host replication replicator 10.0.0.0/24 md5""")
                 script {
                     ansiblePlaybook(
                         playbook: "postgre_remote.yml",
-                        inventory: "inventary.yml",
+                        inventory: "/home/inventary.yml",
                         extraVars: [
                             postgresql_version: params.postgresql_version,
                             data_directory: params.data_directory,

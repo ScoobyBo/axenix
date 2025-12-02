@@ -14,7 +14,7 @@ pipeline {
                 script {
                     ansiblePlaybook(
                         playbook: "postgre_install.yml",
-                        inventory: "inventary.yml",
+                        inventory: "/home/inventary.yml",
                         extraVars: [
                             postgresql_version: params.postgresql_version,
                             replication_user: params.replication_user,

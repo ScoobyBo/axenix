@@ -62,7 +62,7 @@ pipeline {
 
                     ansiblePlaybook(
                         playbook: "postgre_backup.yml",
-                        inventory: "inventary.yml",
+                        inventory: "/home/inventary.yml",
                         extraVars: [
                             backup_dir: params.backup_dir,
                             max_backups: params.max_backups,

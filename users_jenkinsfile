@@ -12,7 +12,7 @@ pipeline {
                 script {
                     ansiblePlaybook(
                         playbook: "postgre_users.yml",
-                        inventory: "inventary.yml",
+                        inventory: "/home/inventary.yml",
                         extraVars: [
                             postgresql_user_name: params.postgresql_user_name,
                             postgresql_user_password: params.postgresql_user_password

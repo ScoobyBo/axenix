@@ -15,7 +15,7 @@ pipeline {
                 script {
                     ansiblePlaybook(
                         playbook: "postgre_restore.yml",
-                        inventory: "inventary.yml",
+                        inventory: "/home/inventary.yml",
                         extraVars: [
                             backup_file: params.backup_file,
                             data_directory: params.data_directory,

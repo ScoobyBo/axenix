@@ -13,7 +13,7 @@ pipeline {
                 script {
                     ansiblePlaybook(
                         playbook: "postgre_db.yml",
-                        inventory: "inventary.yml",
+                        inventory: "/home/inventary.yml",
                         extraVars: [
                             db_name: params.db_name,
                             db_owner: params.db_owner
