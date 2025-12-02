@@ -1,0 +1,27 @@
+pipeline {
+    agent { label 'ax 2' }
+
+    parameters {
+        string(name: 'db_name', defaultValue: 'mydb')
+        string(name: 'db_owner', defaultValue: 'myuser')
+        
+    }
+
+    stages {
+        stage('Run Ansible Role postgre_db') {
+            steps {
+                script {
+                    ansiblePlaybook(
+                        playbook: "postgre_db.yml",
+                        inventory: "inventary.yml",
+                        extraVars: [
+                            db_name: params.db_name,
+                            db_owner: params.db_owner
+                        ],
+                        colorized: true
+                    )
+                }
+            }
+        }
+    }
+}

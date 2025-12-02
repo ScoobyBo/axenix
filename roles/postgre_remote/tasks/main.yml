@@ -24,7 +24,7 @@
   command: >
     pg_basebackup
     -h {{ primary_host }}
-    -p {{ primary_port }}
+    -p 5432
     -U {{ replication_user }}
     -D {{ data_directory }}
     -R
@@ -32,11 +32,7 @@
   environment:
     PGPASSWORD: "{{ replication_password }}"
 
-- name: Start PostgreSQL in replica mode
-  service:
-    name: postgresql
-    state: started
-    enabled: yes
+
 
 - name: Deploy pg_hba.conf
   template:
@@ -46,7 +42,8 @@
     group: postgres
     mode: "0600"
 
-- name: Reload PostgreSQL after pg_hba update
+- name: Start PostgreSQL in replica mode
   service:
     name: postgresql
-    state: reloaded
+    state: started
+    enabled: yes

@@ -8,8 +8,7 @@ data_directory: "/etc/postgresql/{{ postgresql_version }}/main"
 
 
 primary_host: "10.10.10.10"
-primary_port: 5432
-replication_user: "replicator"
+replication_user: "replica"
 replication_password: "secret"
 
 pg_hba_rules:

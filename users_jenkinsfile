@@ -1,0 +1,27 @@
+pipeline {
+    agent { label 'ax 2' }
+
+    parameters {
+        string(name: 'postgresql_user_name', defaultValue: 'appuser')
+        password(name: 'postgresql_user_password', defaultValue: 'secret123')
+    }
+
+    stages {
+        stage('Run Ansible Role postgre_users') {
+            steps {
+                script {
+                    ansiblePlaybook(
+                        playbook: "postgre_users.yml",
+                        inventory: "inventary.yml",
+                        extraVars: [
+                            postgresql_user_name: params.postgresql_user_name,
+                            postgresql_user_password: params.postgresql_user_password
+                        ],
+                        colorized: true
+                    )
+                }
+            }
+        }
+    }
+}
+

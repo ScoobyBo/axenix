@@ -1,0 +1,35 @@
+pipeline {
+    agent { label 'ax 2' }
+
+    parameters {
+        string(name: 'postgresql_version', defaultValue: '15')
+        string(name: 'data_directory', defaultValue: '/etc/postgresql/15/main')
+        string(name: 'primary_host', defaultValue: '10.10.10.10')
+        string(name: 'replication_user', defaultValue: 'replicator')
+        password(name: 'replication_password')
+        text(name: 'pg_hba_rules', defaultValue: """host all all 0.0.0.0/0 md5
+host replication replicator 10.0.0.0/24 md5""")
+    }
+
+    stages {
+        stage('Run Ansible Role postgre_remote') {
+            steps {
+                script {
+                    ansiblePlaybook(
+                        playbook: "postgre_remote.yml",
+                        inventory: "inventary.yml",
+                        extraVars: [
+                            postgresql_version: params.postgresql_version,
+                            data_directory: params.data_directory,
+                            primary_host: params.primary_host,
+                            replication_user: params.replication_user,
+                            replication_password: params.replication_password,
+                            pg_hba_rules: params.pg_hba_rules
+                        ],
+                        colorized: true
+                    )
+                }
+            }
+        }
+    }
+}
