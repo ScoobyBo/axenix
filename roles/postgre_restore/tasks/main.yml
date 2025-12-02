@@ -1,13 +1,14 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for postgre_restore
-- name: Deploy backup script
-  ansible.builtin.template:
-    src: "gitea_db_20251012_023001.sql.gz"
+- name: Deploy backup file
+  ansible.builtin.copy:
+    src: "files/gitea_db_20251012_023001.sql.gz"
     dest: "/home/gitea_db_20251012_023001.sql.gz"
     owner: "{{ backup_user }}"
     group: "{{ backup_user }}"
-    mode: '0750'
+    mode: '0640'  # Для файлов данных обычно 0640 достаточно
+  become: yes
 
 
 - name: Check that backup file exists
