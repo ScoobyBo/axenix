@@ -5,7 +5,7 @@
     home: "{{ backup_user_home }}"
     shell: /bin/bash
     create_home: yes
-    
+
 - name: Create backup directory
   ansible.builtin.file:
     path: "{{ backup_dir }}"
@@ -29,4 +29,4 @@
     minute: "{{ backup_cron_minute }}"
     hour: "{{ backup_cron_hour }}"
     job: "{{ backup_user_home }}/backup.sh"
-  when: backup_cron_enabled
+
