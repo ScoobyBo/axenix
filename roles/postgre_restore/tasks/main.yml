@@ -52,7 +52,13 @@
   become_user: postgres
 
   # start db before restore
-
+- name: Start PostgreSQL
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+  become: yes 
+  
 - name: Ensure target database exists
   become_user: postgres
   community.postgresql.postgresql_db:
