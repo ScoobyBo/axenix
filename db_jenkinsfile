@@ -18,10 +18,10 @@ pipeline {
                 sh '''
                     echo "$vault_password" > vault_pass.txt
                     ansible-vault decrypt private_key_vaulted \
-                        --output private_key \
+                        --output /home/jenkins/private_key \
                         --vault-password-file vault_pass.txt
 
-                    chmod 600 private_key
+                    chmod 600 /home/jenkins/private_key
                 '''
             }
         }
@@ -53,7 +53,7 @@ pipeline {
     post {
         always {
             sh '''
-                rm -f vault_pass.txt private_key
+                rm -f vault_pass.txt /home/jenkins/private_key
             '''
         }
     }
