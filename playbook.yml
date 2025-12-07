@@ -4,4 +4,4 @@
   become: yes
   
   roles:
-    - {{ ANSIBLE_ROLE }}
+    - "{{ ANSIBLE_ROLE }}"
