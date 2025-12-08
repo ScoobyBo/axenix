@@ -11,6 +11,10 @@ pipeline {
         password(name: 'vault_password', description: 'Пароль для расшифровки приватного ключа')
     }
 
+    options {
+        timeout(time: 5, unit: 'MINUTES')
+    }
+
     stages {
 
         stage('Decrypt SSH key') {
