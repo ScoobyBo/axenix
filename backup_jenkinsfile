@@ -2,44 +2,14 @@ pipeline {
     agent { label 'ax 2' }
 
     parameters {
-
-        string(
-            name: 'backup_dir', defaultValue: '/opt/postgres_backups', description: 'Каталог для хранения бэкапов'
-        )
-
-        string(
-            name: 'max_backups', defaultValue: '30', description: 'Максимальное количество хранимых бэкапов'
-        )
-
-        string(
-            name: 'cron_hour', defaultValue: '3', description: 'Час запуска cron-задачи'
-        )
-
-        string(
-            name: 'cron_minute', defaultValue: '0', description: 'Минута запуска cron-задачи'
-        )
-
-        string(
-            name: 'pg_superuser', defaultValue: 'postgres', description: 'Суперпользователь PostgreSQL'
-        )
-
-        string(
-            name: 'pg_dumpall_path', defaultValue: '/usr/bin/pg_dumpall', description: 'Путь к исполняемому файлу pg_dumpall'
-        )
-
-        string(
-            name: 'backup_user', defaultValue: 'pgbackup', description: 'Пользователь для выполнения бэкапов PostgreSQL'
-        )
-
-        string(
-            name: 'backup_user_home', defaultValue: '/opt/pgbackup', description: 'Домашний каталог пользователя для выполнения бэкапов PostgreSQL'
-        )
-
-        
-        password(
-            name: 'vault_password',
-            description: 'Пароль для расшифровки приватного ключа'
-        )
+        string(name: 'backup_cron_hour', defaultValue: '3', description: 'Час запуска cron-задачи')
+        string(name: 'backup_cron_minute', defaultValue: '0', description: 'Минута запуска cron-задачи')
+        string(name: 'max_backup', defaultValue: '30', description: 'Максимальное количество хранимых бэкапов')
+        string(name: 'backup_dir', defaultValue: '', description: 'Каталог для хранения бэкапов')
+        string(name: 'backup_user', defaultValue: 'pgbackup', description: 'Пользователь для выполнения бэкапов PostgreSQL')
+        string(name: 'postgres_admin_user', defaultValue: 'Ivan_administrator')
+        password(name: 'postgres_admin_password')
+        password(name: 'vault_password', description: 'Пароль для расшифровки приватного ключа')
     }
 
     options {

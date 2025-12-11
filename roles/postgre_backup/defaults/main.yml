@@ -2,16 +2,13 @@
 ---
 # defaults file for postgre_backup
 backup_user: "pgbackup"
-backup_user_home: "/opt/pgbackup"
+backup_dir: ""
 
-backup_dir: "{{ backup_user_home }}/backups"
-
-backup_retention: 7
+max_backup: 7
 
 backup_cron_minute: "0"
 backup_cron_hour: "2"
 
-pg_dumpall_path: "/usr/bin/pg_dumpall"
-
-postgres_admin_user: "postgres"
+postgres_admin_user: "Ivan_administrator"
+postgres_admin_password: "12345678"
     

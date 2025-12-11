@@ -7,9 +7,8 @@
     dest: "/home/gitea_db_20251012_023001.sql.gz"
     owner: "{{ backup_user }}"
     group: "{{ backup_user }}"
-    mode: '0640'  # Для файлов данных обычно 0640 достаточно
+    mode: '0640'  
   become: yes
-
 
 - name: Check that backup file exists
   stat:
@@ -21,12 +20,12 @@
     msg: "Backup file '{{ backup_file }}' not found"
   when: not backup_stat.stat.exists
 
-
 - name: Stop PostgreSQL
   service:
     name: postgresql
     state: stopped
   become: yes  
+  when: force_reinit
 
 - name: Remove old data directory
   file:
@@ -43,7 +42,6 @@
   become_user: postgres
 
 
-
 - name: Ensure data directory exists
   file:
     path: "{{ data_directory }}"
@@ -53,7 +51,6 @@
     mode: "0700"
   become_user: postgres
 
-  # start db before restore
 - name: Start PostgreSQL
   service:
     name: postgresql
@@ -87,10 +84,3 @@
     login_password: "{{ postgres_admin_password }}"
     login_host: localhost
   # Модуль сам обработает .gz файл
-
-- name: Start PostgreSQL
-  service:
-    name: postgresql
-    state: started
-    enabled: yes
-  become: yes  

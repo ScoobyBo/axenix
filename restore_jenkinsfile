@@ -8,8 +8,6 @@ pipeline {
         booleanParam(name: 'force_reinit', defaultValue: false)
         string(name: 'postgres_admin_user', defaultValue: 'Ivan_administrator')
         password(name: 'postgres_admin_password')
-
-        
         password(
             name: 'vault_password',
             description: 'Пароль для расшифровки приватного SSH-ключа'

@@ -2,8 +2,7 @@
 - name: Create backup user
   ansible.builtin.user:
     name: "{{ backup_user }}"
-    home: "{{ backup_user_home }}"
-    shell: /bin/bash
+    shell: /sbin/nologin
     create_home: yes
 
 - name: Create backup directory
@@ -17,7 +16,7 @@
 - name: Deploy backup script
   ansible.builtin.template:
     src: "backup.sh.j2"
-    dest: "{{ backup_user_home }}/backup.sh"
+    dest: "/home/{{ backup_user }}/backup.sh"
     owner: "{{ backup_user }}"
     group: "{{ backup_user }}"
     mode: '0750'
@@ -28,5 +27,5 @@
     user: "{{ backup_user }}"
     minute: "{{ backup_cron_minute }}"
     hour: "{{ backup_cron_hour }}"
-    job: "{{ backup_user_home }}/backup.sh"
+    job: "/home/{{ backup_user }}/backup.sh"
 

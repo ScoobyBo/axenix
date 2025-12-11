@@ -2,10 +2,12 @@
 ---
 # defaults file for postgre_restore
 backup_file: "/home/gitea_db_20251012_023001.sql.gz"
-data_directory: "/var/lib/postgresql/15/main"
 postgresql_version: "15"
 restore_db: "gitea"
 backup_user: "pgbackup"
 force_reinit: false
 postgres_admin_user: "Ivan_administrator"
 postgres_admin_password: "12345678"
+
+
+data_directory: "/var/lib/postgresql/{{ postgresql_version }}/main"
