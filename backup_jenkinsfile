@@ -8,6 +8,7 @@ pipeline {
         string(name: 'backup_dir', defaultValue: '', description: 'Каталог для хранения бэкапов')
         string(name: 'backup_user', defaultValue: 'pgbackup', description: 'Пользователь для выполнения бэкапов PostgreSQL')
         string(name: 'postgres_admin_user', defaultValue: 'Ivan_administrator')
+        string(name: 'db_name', defaultValue: 'postgres', description: 'База данных, бэкап которой создают')
         password(name: 'postgres_admin_password')
         password(name: 'vault_password', description: 'Пароль для расшифровки приватного ключа')
     }

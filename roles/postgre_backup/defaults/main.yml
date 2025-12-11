@@ -9,6 +9,7 @@ max_backup: 7
 backup_cron_minute: "0"
 backup_cron_hour: "2"
 
+db_name: "postgres"
 postgres_admin_user: "Ivan_administrator"
 postgres_admin_password: "12345678"
     
